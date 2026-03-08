@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 SkillVibe
 
-## Getting Started
+SkillVibe is a **governance-driven team formation platform for academic events**.
+It ensures that teams meet event requirements before they are allowed to register externally.
 
-First, run the development server:
+Instead of chaotic hackathon registrations, SkillVibe introduces **structured participation, skill validation, and team readiness governance.**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+# 🧠 Core Idea
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+SkillVibe acts as a **governance layer before event registration**.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Students:
 
-## Learn More
+* Add their skills
+* Discover events
+* Form teams
+* Validate readiness
 
-To learn more about Next.js, take a look at the following resources:
+Only when the team is **ready and locked**, the official event registration link becomes visible.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# 🏗 Tech Stack
 
-## Deploy on Vercel
+### Frontend
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+* Next.js 16 (App Router)
+* TypeScript
+* Tailwind CSS v4
+* Framer Motion
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Backend
+
+* Next.js API Routes
+* Prisma ORM
+* Neon PostgreSQL
+
+### Authentication
+
+* NextAuth v4
+* JWT Session Strategy
+
+---
+
+# 👤 Roles
+
+### 🎓 Student
+
+* Manage skills
+* Explore events
+* Create / join teams
+* Participate in events
+
+### 👨‍🏫 Mentor
+
+* Monitor team readiness
+* View event analytics
+* Observe team composition
+
+### 🛠 Admin
+
+* Create events
+* Manage governance
+* Unlock teams
+* Monitor participation metrics
+
+---
+
+# 🧩 Core Features
+
+✔ Skill Management
+✔ Event Discovery
+✔ Skill Match Percentage
+✔ Team Creation
+✔ Join via Team Code
+✔ Team Governance System
+✔ Leader Lock Mechanism
+✔ Admin Unlock Override
+✔ Role-Based Dashboards
+
+---
+
+# 🧠 Governance System
+
+SkillVibe enforces:
+
+* Skill validation
+* Team readiness
+* Participation confirmation
+* Team locking
+* Admin oversight
+* Mentor monitoring
+
+This ensures **only valid teams register for events.**
+
+---
+
+# 📊 Current Status
+
+SkillVibe is currently a **Governance-Ready MVP (~75% complete)**.
+
+Planned features:
+
+* Official event registration reveal system
+* Skill collaboration posts
+* Mentor endorsements
+* Audit logs
+
+---
+
+# 🚀 Future Vision
+
+SkillVibe aims to become a **governance-driven collaboration platform for academic events and hackathons**, enabling structured participation and skill-based team discovery.
+
+---
+
+# 👩‍💻 Author
+
+Neha Chintala
+Engineering Student | Builder | Hackathon Participant
