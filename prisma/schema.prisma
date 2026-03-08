@@ -1,0 +1,241 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id         String   @id @default(uuid())
+  name       String?
+  email      String   @unique
+  password   String? 
+  role       Role     @default(STUDENT)
+
+  department String?
+  division   String?
+  batch      String?
+
+  studentId  String?
+  mentorId   String?
+  adminId    String?
+
+  year       Int?
+  linkedinUrl String?
+
+  createdAt  DateTime @default(now())
+
+  accounts Account[]
+  sessions Session[]
+
+  skills           UserSkill[]
+  participations   Participation[]
+  teamMembers      TeamMember[]
+  posts            SkillRequestPost[]
+  postInterests    PostInterest[]
+  projects         Project[]
+  projectMembers   ProjectMember[]
+  projectInterests ProjectInterest[]
+  ledTeams         Team[]             @relation("TeamLeader")
+}
+
+model Skill {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  users       UserSkill[]
+  eventSkills EventSkill[]
+}
+
+model UserSkill {
+  id      String     @id @default(uuid())
+  user    User       @relation(fields: [userId], references: [id])
+  userId  String
+  skill   Skill      @relation(fields: [skillId], references: [id])
+  skillId String
+  level   SkillLevel
+
+  @@unique([userId, skillId])
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  minTeamSize Int
+  maxTeamSize Int
+  createdAt   DateTime @default(now())
+
+  participations Participation[]
+  teams          Team[]
+  eventSkills    EventSkill[]
+}
+
+model Participation {
+  id        String              @id @default(uuid())
+  userId    String
+  eventId   String
+  status    ParticipationStatus @default(INTERESTED)
+  createdAt DateTime            @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+}
+
+model Team {
+  id        String   @id @default(uuid())
+  name      String?
+  code      String   @unique
+  eventId   String
+  leaderId  String
+  isReady   Boolean  @default(false)
+  isLocked  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  event   Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  leader  User         @relation("TeamLeader", fields: [leaderId], references: [id])
+  members TeamMember[]
+}
+
+model TeamMember {
+  id     String @id @default(uuid())
+  team   Team   @relation(fields: [teamId], references: [id])
+  teamId String
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  @@unique([teamId, userId])
+}
+
+model SkillRequestPost {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+
+  creator   User   @relation(fields: [creatorId], references: [id])
+  creatorId String
+
+  interests PostInterest[]
+}
+
+model PostInterest {
+  id        String           @id @default(uuid())
+  post      SkillRequestPost @relation(fields: [postId], references: [id])
+  postId    String
+  user      User             @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime         @default(now())
+
+  @@unique([postId, userId])
+}
+
+model Project {
+  id               String   @id @default(uuid())
+  title            String
+  shortDescription String
+  fullDescription  String?
+  architecture     String?
+  totalPhases      Int
+  currentPhase     Int      @default(1)
+  createdAt        DateTime @default(now())
+
+  owner   User   @relation(fields: [ownerId], references: [id])
+  ownerId String
+
+  members   ProjectMember[]
+  interests ProjectInterest[]
+}
+
+model ProjectMember {
+  id        String  @id @default(uuid())
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String
+
+  @@unique([projectId, userId])
+}
+
+model ProjectInterest {
+  id        String   @id @default(uuid())
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, userId])
+}
+
+model EventSkill {
+  id      String @id @default(uuid())
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  skillId String
+
+  @@unique([eventId, skillId])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Role {
+  STUDENT
+  MENTOR
+  ADMIN
+}
+
+enum SkillLevel {
+  Beginner
+  Intermediate
+  Advanced
+}
+
+enum ParticipationStatus {
+  INTERESTED
+  PENDING
+  CONFIRMED
+}
