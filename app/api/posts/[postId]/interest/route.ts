@@ -4,8 +4,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 export async function POST(
-  req: Request,
-  { params }: { params: { postId: string } },
+  req: NextRequest,
+  { params }: { params: Promise<{ postId: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
