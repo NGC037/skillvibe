@@ -38,8 +38,8 @@ model User {
   skills           UserSkill[]
   participations   Participation[]
   teamMembers      TeamMember[]
-  posts            SkillRequestPost[]
-  postInterests    PostInterest[]
+ skillPosts      SkillRequestPost[]
+ postInterests   PostInterest[]
   projects         Project[]
   projectMembers   ProjectMember[]
   projectInterests ProjectInterest[]
@@ -51,6 +51,7 @@ model Skill {
   name        String       @unique
   users       UserSkill[]
   eventSkills EventSkill[]
+  postRequiredSkills PostRequiredSkill[]
 }
 
 model UserSkill {
@@ -75,6 +76,7 @@ model Event {
   participations Participation[]
   teams          Team[]
   eventSkills    EventSkill[]
+  skillPosts   SkillRequestPost[]
 }
 
 model Participation {
@@ -117,25 +119,44 @@ model TeamMember {
 
 model SkillRequestPost {
   id          String   @id @default(uuid())
+
   title       String
   description String
+
+  userId      String
+  user        User @relation(fields: [userId], references: [id])
+
+  eventId     String?
+  event       Event? @relation(fields: [eventId], references: [id])
+
   createdAt   DateTime @default(now())
 
-  creator   User   @relation(fields: [creatorId], references: [id])
-  creatorId String
-
-  interests PostInterest[]
+  interests       PostInterest[]
+  requiredSkills  PostRequiredSkill[]
 }
 
 model PostInterest {
-  id        String           @id @default(uuid())
-  post      SkillRequestPost @relation(fields: [postId], references: [id])
+  id        String   @id @default(uuid())
+
   postId    String
-  user      User             @relation(fields: [userId], references: [id])
+  post      SkillRequestPost @relation(fields: [postId], references: [id])
+
   userId    String
-  createdAt DateTime         @default(now())
+  user      User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
 
   @@unique([postId, userId])
+}
+
+model PostRequiredSkill {
+  id      String @id @default(uuid())
+
+  postId  String
+  post    SkillRequestPost @relation(fields: [postId], references: [id])
+
+  skillId String
+  skill   Skill @relation(fields: [skillId], references: [id])
 }
 
 model Project {

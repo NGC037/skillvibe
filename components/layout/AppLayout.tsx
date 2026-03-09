@@ -66,6 +66,7 @@ export default function AppLayout({
               {navItem("/events", "Events")}
               {navItem("/teams", "Teams")}
               {navItem("/profile", "Profile")}
+              {navItem("/posts", "Skill Posts")}
             </>
 
           )}
