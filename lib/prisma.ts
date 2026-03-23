@@ -1,19 +1,10 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaNeon } from "@prisma/adapter-neon";
 
-const adapter = new PrismaNeon({
-  connectionString: process.env.DATABASE_URL!,
-});
-
-const globalForPrisma = global as unknown as {
+const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    adapter,
-  });
+export const prisma = globalForPrisma.prisma ?? new PrismaClient(); // ✅ NO adapter
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
