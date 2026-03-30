@@ -4,9 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function PATCH(
   req: Request,
-  props: { params: Promise<{ eventId: string }> },
+  context: { params: Promise<{ eventId: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,7 +21,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const { eventId } = await props.params;
+    const { eventId } = await context.params;
 
     if (!eventId) {
       return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
