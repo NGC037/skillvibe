@@ -8,36 +8,54 @@ function generateCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-// GET teams for event
 export async function GET(
-  request: Request,
-  context: { params: Promise<{ eventId: string }> }
+  _request: Request,
+  context: { params: Promise<{ eventId: string }> },
 ) {
   try {
     const { eventId } = await context.params;
+    const session = await getServerSession(authOptions);
 
     const teams = await prisma.team.findMany({
-  where: { eventId },
-  include: {
-    members: {
+      where: { eventId },
       include: {
-        user: true,  // 🔥 important
+        members: {
+          include: {
+            user: true,
+          },
+        },
+        joinRequests: session?.user?.id
+          ? {
+              where: {
+                userId: session.user.id,
+              },
+              select: {
+                id: true,
+                status: true,
+              },
+            }
+          : false,
       },
-    },
-  },
-});
+    });
 
-    return NextResponse.json(teams);
+    return NextResponse.json(
+      teams.map((team) => ({
+        ...team,
+        currentUserRequestStatus:
+          Array.isArray(team.joinRequests) && team.joinRequests.length > 0
+            ? team.joinRequests[0].status
+            : null,
+      })),
+    );
   } catch (error) {
     console.error("GET TEAMS ERROR:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
-// CREATE TEAM
 export async function POST(
   request: Request,
-  context: { params: Promise<{ eventId: string }> }
+  context: { params: Promise<{ eventId: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -53,10 +71,8 @@ export async function POST(
     }
 
     const { eventId } = await context.params;
-
     const code = generateCode();
 
-    // ✅ FIX 1: Use relation connect instead of leaderId
     const team = await prisma.team.create({
       data: {
         name,
@@ -78,7 +94,6 @@ export async function POST(
       },
     });
 
-    // ✅ FIX 2: Readiness logic INSIDE POST function
     const updatedTeam = await prisma.team.findUnique({
       where: { id: team.id },
       include: {
@@ -91,8 +106,7 @@ export async function POST(
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    const isReady =
-      updatedTeam.members.length >= updatedTeam.event.minTeamSize;
+    const isReady = updatedTeam.members.length >= updatedTeam.event.minTeamSize;
 
     await prisma.team.update({
       where: { id: team.id },
@@ -107,7 +121,7 @@ export async function POST(
       where: {
         eventId: updatedTeam.eventId,
         userId: {
-          in: updatedTeam.members.map((m) => m.userId),
+          in: updatedTeam.members.map((member) => member.userId),
         },
       },
       data: {
@@ -115,7 +129,10 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(team);
+    return NextResponse.json({
+      ...team,
+      teamId: team.id,
+    });
   } catch (error) {
     console.error("CREATE TEAM ERROR:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

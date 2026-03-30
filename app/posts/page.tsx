@@ -44,7 +44,7 @@ export default function PostsPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<Creator | null>(null);
 
   const [interestModalOpen, setInterestModalOpen] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -66,14 +66,13 @@ export default function PostsPage() {
       });
 
       const data = await res.json();
-
       console.log(data);
-
       router.refresh();
     } catch (error) {
       console.error("Interest error:", error);
     }
   };
+
   const handleEdit = async (postId: string) => {
     const title = prompt("Enter new title");
     const description = prompt("Enter new description");
@@ -107,34 +106,48 @@ export default function PostsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
-      {/* Hero Section */}
-
+    <div className="mx-auto max-w-7xl space-y-10 px-6 py-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl p-8 shadow-lg"
+        className="surface-card-strong overflow-hidden p-8 text-white"
       >
-        <h1 className="text-3xl font-bold">Skill Requests</h1>
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-purple-200">
+              Collaboration board
+            </p>
+            <h1 className="mt-3 text-3xl font-bold">Skill Requests</h1>
+            <p className="mt-2 max-w-2xl text-purple-100">
+              Discover teammates and collaborate on upcoming events.
+            </p>
+          </div>
 
-        <p className="mt-2 text-purple-100">
-          Discover teammates and collaborate on upcoming events.
-        </p>
-
-        <button
-          onClick={() => setModalOpen(true)}
-          className="mt-4 px-4 py-2 bg-white text-purple-600 rounded-lg font-medium"
-        >
-          + Create Skill Request
-        </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="rounded-2xl bg-white px-5 py-3 font-medium text-purple-700 shadow-lg transition hover:scale-[1.02]"
+          >
+            + Create Skill Request
+          </button>
+        </div>
       </motion.div>
 
-      {/* Posts Feed */}
-
       {loading ? (
-        <p className="text-neutral-500">Loading posts...</p>
+        <div className="grid gap-6">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="surface-card p-6 space-y-4">
+              <div className="shimmer-skeleton h-6 w-48 rounded-full" />
+              <div className="shimmer-skeleton h-4 w-32 rounded-full" />
+              <div className="shimmer-skeleton h-16 w-full rounded-2xl" />
+              <div className="flex gap-2">
+                <div className="shimmer-skeleton h-8 w-20 rounded-full" />
+                <div className="shimmer-skeleton h-8 w-24 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : posts.length === 0 ? (
-        <div className="bg-white border border-neutral-200 rounded-xl p-8 text-center">
+        <div className="surface-card p-8 text-center">
           <p className="text-neutral-600">No skill requests yet.</p>
         </div>
       ) : (
@@ -143,107 +156,98 @@ export default function PostsPage() {
             <motion.div
               key={post.id}
               whileHover={{ y: -4 }}
-              className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm transition"
+              className="surface-card interactive-card p-6 transition"
             >
-              {/* Title */}
+              <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="text-xl font-semibold text-neutral-900">{post.title}</h2>
 
-              <h2 className="text-lg font-semibold">{post.title}</h2>
+                    {post.event ? (
+                      <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
+                        Event: {post.event.title}
+                      </span>
+                    ) : null}
+                  </div>
 
-              {/* Event */}
+                  <p className="mt-4 leading-7 text-neutral-700">{post.description}</p>
 
-              {post.event && (
-                <p className="text-sm text-neutral-500 mt-1">
-                  Event: {post.event.title}
-                </p>
-              )}
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {post.requiredSkills.map((skill) => (
+                      <span
+                        key={skill.id}
+                        className="rounded-full bg-purple-100 px-3 py-1 text-sm text-purple-700"
+                      >
+                        {skill.name}
+                      </span>
+                    ))}
+                  </div>
 
-              {/* Description */}
-
-              <p className="text-neutral-700 mt-3">{post.description}</p>
-
-              {/* Skills */}
-
-              <div className="flex flex-wrap gap-2 mt-4">
-                {post.requiredSkills.map((skill) => (
-                  <span
-                    key={skill.id}
-                    className="px-3 py-1 text-sm rounded-full bg-purple-100 text-purple-700"
-                  >
-                    {skill.name}
-                  </span>
-                ))}
-              </div>
-
-              {/* Footer */}
-
-              <div className="flex items-center justify-between mt-6">
-                <div className="text-sm text-neutral-500">
-                  Posted by {post.creator.name} • {post.creator.department} •
-                  Year {post.creator.year}
+                  <div className="mt-6 border-t border-neutral-100 pt-4 text-sm text-neutral-500">
+                    Posted by {post.creator.name} - {post.creator.department} - Year {post.creator.year}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-neutral-500">
-                    {post.interestCount} interested
-                  </span>
+                <div className="w-full max-w-sm space-y-4 rounded-[1.5rem] border border-neutral-100 bg-gradient-to-br from-neutral-50 to-white p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-neutral-500">Interest</span>
+                    <span className="rounded-full bg-teal-50 px-3 py-1 text-sm font-medium text-teal-700">
+                      {post.interestCount} interested
+                    </span>
+                  </div>
 
-                  {/* INTEREST BUTTON */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => handleInterest(post.id)}
+                      className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition hover:shadow-md"
+                    >
+                      I&apos;m Interested
+                    </button>
 
-                  <button
-                    onClick={() => handleInterest(post.id)}
-                    className="px-4 py-2 text-sm font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition"
-                  >
-                    I'm Interested
-                  </button>
-                  {post.creator.id === session?.user?.id && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleEdit(post.id)}
-                        className="px-3 py-2 text-sm font-medium border border-neutral-200 rounded-lg hover:bg-neutral-100 transition"
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        onClick={() => handleDelete(post.id)}
-                        className="px-3 py-2 text-sm font-medium border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-
-                  {/* PROFILE */}
-
-                  <button
-                    onClick={() => {
-                      setSelectedUser(post.creator);
-                      setProfileOpen(true);
-                    }}
-                    className="px-4 py-2 text-sm border rounded-lg"
-                  >
-                    View Profile
-                  </button>
-
-                  {/* CANDIDATES */}
+                    <button
+                      onClick={() => {
+                        setSelectedUser(post.creator);
+                        setProfileOpen(true);
+                      }}
+                      className="rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-700 transition hover:bg-neutral-50"
+                    >
+                      View Profile
+                    </button>
+                  </div>
 
                   <button
                     onClick={() => {
                       setSelectedPostId(post.id);
                       setInterestModalOpen(true);
                     }}
-                    className="px-4 py-2 text-sm border rounded-lg"
+                    className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm text-neutral-700 transition hover:bg-neutral-50"
                   >
                     View Candidates
                   </button>
+
+                  {post.creator.id === session?.user?.id ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => handleEdit(post.id)}
+                        className="rounded-xl border border-neutral-200 px-3 py-2.5 text-sm font-medium transition hover:bg-neutral-100"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(post.id)}
+                        className="rounded-xl border border-red-200 px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </motion.div>
           ))}
         </div>
       )}
-
-      {/* MODALS */}
 
       <CreatePostModal
         open={modalOpen}

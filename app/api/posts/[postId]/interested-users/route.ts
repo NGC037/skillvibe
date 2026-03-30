@@ -63,10 +63,13 @@ export async function GET(
       return {
         id: interest.user.id,
         name: interest.user.name,
+        email: interest.user.email,
         department: interest.user.department,
         division: interest.user.division,
         year: interest.user.year,
         linkedinUrl: interest.user.linkedinUrl,
+        githubUrl: interest.user.githubUrl,
+        portfolioUrl: interest.user.portfolioUrl,
         matchScore,
         skills: interest.user.skills.map((s) => s.skill),
       };

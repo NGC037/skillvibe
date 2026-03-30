@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSession } from "next-auth/react";
+import ProfilePanel from "@/components/profile/ProfilePanel";
 
 type Skill = {
   id: string;
@@ -11,10 +13,13 @@ type Skill = {
 type User = {
   id: string;
   name: string;
+  email?: string;
   department: string;
   division: string;
   year: number;
   linkedinUrl?: string;
+  githubUrl?: string;
+  portfolioUrl?: string;
   matchScore: number;
   skills: Skill[];
 };
@@ -30,18 +35,36 @@ export default function InterestedUsersModal({
 }) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const { data: session } = useSession();
 
   useEffect(() => {
     if (!postId) return;
 
-    setLoading(true);
+    let cancelled = false;
 
-    fetch(`/api/posts/${postId}/interested-users`)
-      .then((res) => res.json())
-      .then((data) => {
-        setUsers(data.users || []);
-        setLoading(false);
-      });
+    const loadInterestedUsers = async () => {
+      setLoading(true);
+
+      try {
+        const res = await fetch(`/api/posts/${postId}/interested-users`);
+        const data = await res.json();
+
+        if (!cancelled) {
+          setUsers(data.users || []);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInterestedUsers();
+
+    return () => {
+      cancelled = true;
+    };
   }, [postId]);
 
   return (
@@ -109,13 +132,34 @@ export default function InterestedUsersModal({
                     </div>
 
                     {user.linkedinUrl && (
-                      <a
-                        href={user.linkedinUrl}
-                        target="_blank"
-                        className="text-sm text-purple-600 hover:underline"
+                      <div className="flex flex-col items-end gap-2">
+                        <a
+                          href={user.linkedinUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-purple-600 hover:underline"
+                        >
+                          LinkedIn
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUser(user)}
+                          className="text-sm px-3 py-2 rounded-lg bg-neutral-900 text-white hover:bg-black transition"
+                        >
+                          View Profile
+                        </button>
+                      </div>
+                    )}
+
+                    {!user.linkedinUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedUser(user)}
+                        className="text-sm px-3 py-2 rounded-lg bg-neutral-900 text-white hover:bg-black transition"
                       >
-                        LinkedIn
-                      </a>
+                        View Profile
+                      </button>
                     )}
                   </div>
                 ))}
@@ -124,6 +168,16 @@ export default function InterestedUsersModal({
           </motion.div>
         </motion.div>
       )}
+
+      <ProfilePanel
+        open={Boolean(selectedUser)}
+        onClose={() => setSelectedUser(null)}
+        userId={selectedUser?.id}
+        currentUserId={session?.user?.id}
+        name={selectedUser?.name}
+        email={selectedUser?.email}
+        isEditable={false}
+      />
     </AnimatePresence>
   );
 }

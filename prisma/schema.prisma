@@ -12,6 +12,7 @@ model User {
   name             String?
   email            String             @unique
   createdAt        DateTime           @default(now())
+  coins            Int                @default(0)
   batch            String?
   department       String?
   division         String?
@@ -19,9 +20,12 @@ model User {
   password         String?
   adminId          String?
   linkedinUrl      String?
+  githubUrl        String?
+  portfolioUrl     String?
   mentorId         String?
   studentId        String?
   year             Int?
+  bio              String?
   accounts         Account[]
   participations   Participation[]
   postInterests    PostInterest[]
@@ -32,7 +36,42 @@ model User {
   skillPosts       SkillRequestPost[]
   ledTeams         Team[]             @relation("TeamLeader")
   teamMembers      TeamMember[]
+  teamJoinRequests TeamJoinRequest[]
   skills           UserSkill[]
+  avatar           Avatar?
+  userItems        UserItem[]
+  notifications    Notification[]
+  mentorAssignments MentorMentee[]    @relation("Mentor")
+  menteeAssignment MentorMentee?      @relation("Student")
+}
+
+model Avatar {
+  id        String  @id @default(cuid())
+  userId    String  @unique
+  base      String  @default("base_default")
+  hair      String  @default("hair_default")
+  outfit    String  @default("outfit_default")
+  accessory String?
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AvatarItem {
+  id        String     @id @default(cuid())
+  name      String
+  type      String
+  imageUrl  String
+  price     Int
+  userItems UserItem[]
+}
+
+model UserItem {
+  id     String     @id @default(cuid())
+  userId String
+  itemId String
+  item   AvatarItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
 }
 
 model Skill {
@@ -44,12 +83,13 @@ model Skill {
 }
 
 model UserSkill {
-  id      String     @id @default(uuid())
-  userId  String
-  skillId String
-  level   SkillLevel
-  skill   Skill      @relation(fields: [skillId], references: [id])
-  user    User       @relation(fields: [userId], references: [id])
+  id       String     @id @default(uuid())
+  userId   String
+  skillId  String
+  level    SkillLevel
+  endorsed Boolean    @default(false)
+  skill    Skill      @relation(fields: [skillId], references: [id])
+  user     User       @relation(fields: [userId], references: [id])
 
   @@unique([userId, skillId])
 }
@@ -60,6 +100,7 @@ model Event {
   description        String?
   minTeamSize        Int
   maxTeamSize        Int
+  maxParticipants    Int?
   createdAt          DateTime           @default(now())
   externalLink       String?
   isRegistrationOpen Boolean            @default(false)
@@ -93,6 +134,7 @@ model Team {
   event     Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
   leader    User         @relation("TeamLeader", fields: [leaderId], references: [id])
   members   TeamMember[]
+  joinRequests TeamJoinRequest[]
 }
 
 model TeamMember {
@@ -101,6 +143,18 @@ model TeamMember {
   userId String
   team   Team   @relation(fields: [teamId], references: [id])
   user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([teamId, userId])
+}
+
+model TeamJoinRequest {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, userId])
 }
@@ -215,6 +269,25 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  type      String?
+  requestId String?
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MentorMentee {
+  id        String @id @default(cuid())
+  mentorId  String
+  studentId String @unique
+  mentor    User   @relation("Mentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  student   User   @relation("Student", fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 enum Role {

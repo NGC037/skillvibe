@@ -10,9 +10,10 @@ export default function AnimatedCard({
   return (
     <motion.div
       initial={{ opacity: 0, y: 25 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      whileHover={{ y: -4 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      whileHover={{ y: -4, scale: 1.01 }}
     >
       {children}
     </motion.div>

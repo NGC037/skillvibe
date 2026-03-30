@@ -3,17 +3,12 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { TypeAnimation } from "react-type-animation";
-
 import Navbar from "@/components/Navbar";
 import FloatingBackground from "@/components/FloatingBackground";
 import HeroDashboardPreview from "@/components/HeroDashboardPreview";
 import SkillNetwork from "@/components/SkillNetwork";
 import SkillMatchDemo from "@/components/SkillMatchDemo";
 import TeamFormationDemo from "@/components/TeamFormationDemo";
-
-/* ----------------------------------------------------- */
-/* Animation Variants (prevents inline re-creation) */
-/* ----------------------------------------------------- */
 
 const heroAnimation = {
   hidden: { opacity: 0, y: 40 },
@@ -24,10 +19,6 @@ const cardAnimation = {
   hidden: { opacity: 0, y: 40 },
   visible: { opacity: 1, y: 0 },
 };
-
-/* ----------------------------------------------------- */
-/* Static Data (avoids re-rendering arrays) */
-/* ----------------------------------------------------- */
 
 const rotatingTaglines = [
   "Students Build",
@@ -73,43 +64,41 @@ const roles = [
   {
     title: "Administrators",
     desc: "Govern participation and enforce event readiness rules.",
-    gradient: "from-pink-50 to-rose-50 border-pink-100",
+    gradient: "from-teal-50 to-emerald-50 border-teal-100",
   },
 ];
 
 export default function LandingPage() {
   return (
-    <main className="bg-neutral-100 min-h-screen">
+    <motion.main
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className="min-h-screen bg-transparent"
+    >
       <Navbar />
-
-      {/* ----------------------------------------------------- */}
-      {/* HERO SECTION */}
-      {/* ----------------------------------------------------- */}
 
       <section
         aria-label="Hero"
-        className="relative pt-40 pb-36 text-center overflow-hidden"
+        className="relative overflow-hidden pt-40 pb-32 text-center"
       >
-        {/* Gradient Background */}
-
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-indigo-500 to-blue-500 opacity-90" />
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-700 via-indigo-600 to-teal-500 opacity-95" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_34%)]" />
         <SkillNetwork />
         <FloatingBackground />
 
-        <div className="relative max-w-7xl mx-auto px-6 text-white">
+        <div className="relative mx-auto max-w-7xl px-6 text-white">
           <motion.h1
             variants={heroAnimation}
             initial="hidden"
             animate="visible"
             transition={{ duration: 0.6 }}
-            className="text-6xl md:text-7xl font-bold tracking-tight"
+            className="text-5xl font-bold tracking-tight leading-[0.95] md:text-7xl"
           >
             Where Great Event Teams Begin
           </motion.h1>
 
-          {/* ROTATING TAGLINE */}
-
-          <div className="mt-6 text-2xl font-semibold">
+          <div className="mt-6 text-2xl font-semibold text-white/95">
             <TypeAnimation
               sequence={rotatingTaglines}
               wrapper="span"
@@ -118,25 +107,23 @@ export default function LandingPage() {
             />
           </div>
 
-          <p className="mt-8 max-w-2xl mx-auto text-lg text-white/90">
-            SkillVibe validates team readiness before official event
-            registration. Build skill-based teams, enforce governance rules, and
-            bring structured collaboration to academic competitions.
+          <p className="mx-auto mt-8 max-w-3xl text-lg leading-8 text-white/88">
+            SkillVibe validates team readiness before official event registration.
+            Build skill-based teams, enforce governance rules, and bring structured
+            collaboration to academic competitions.
           </p>
 
-          {/* CTA Buttons */}
-
-          <div className="mt-10 flex justify-center gap-4">
+          <div className="mt-10 flex flex-wrap justify-center gap-4">
             <Link
               href="/register"
-              className="bg-white text-black px-6 py-3 rounded-lg font-medium hover:scale-105 transition"
+              className="rounded-2xl bg-white px-6 py-3.5 font-medium text-black shadow-lg transition hover:scale-[1.03]"
             >
               Get Started
             </Link>
 
             <Link
               href="/login"
-              className="border border-white px-6 py-3 rounded-lg hover:bg-white hover:text-black transition"
+              className="rounded-2xl border border-white/70 bg-white/10 px-6 py-3.5 backdrop-blur transition hover:bg-white hover:text-black"
             >
               Login
             </Link>
@@ -144,43 +131,37 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* HERO DASHBOARD PREVIEW */}
-
       <HeroDashboardPreview />
 
-      {/* ----------------------------------------------------- */}
-      {/* PRODUCT PREVIEW */}
-      {/* ----------------------------------------------------- */}
-
-      <section className="max-w-7xl mx-auto px-6 py-24">
+      <section className="mx-auto max-w-7xl px-6 py-24">
         <motion.div
           variants={cardAnimation}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="bg-white border border-neutral-200 rounded-2xl p-10 shadow-xl"
+          className="surface-card-strong p-10"
         >
-          <h2 className="text-3xl font-semibold text-center">
+          <h2 className="text-center text-3xl font-semibold">
             Built for Structured Event Participation
           </h2>
 
-          <p className="mt-4 text-neutral-600 text-center max-w-xl mx-auto">
+          <p className="mx-auto mt-4 max-w-2xl text-center leading-7 text-neutral-600">
             SkillVibe introduces a governance layer for academic competitions,
             ensuring teams meet requirements before registration.
           </p>
 
-          <div className="grid md:grid-cols-3 gap-6 mt-12">
-            {productCards.map((card, i) => (
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {productCards.map((card) => (
               <motion.div
                 key={card}
                 whileHover={{ y: -8 }}
                 transition={{ type: "spring", stiffness: 200 }}
-                className="bg-neutral-50 border border-neutral-200 rounded-xl p-6"
+                className="interactive-card rounded-2xl border border-neutral-200 bg-gradient-to-br from-white to-neutral-50 p-6"
               >
                 <h3 className="font-medium">{card}</h3>
 
-                <p className="text-sm text-neutral-500 mt-2">
+                <p className="mt-2 text-sm text-neutral-500">
                   Monitor and manage structured collaboration across events.
                 </p>
               </motion.div>
@@ -188,27 +169,23 @@ export default function LandingPage() {
           </div>
         </motion.div>
       </section>
-<div className="mt-12">
-  <SkillMatchDemo />
-</div>
-      {/* ----------------------------------------------------- */}
-      {/* HOW IT WORKS */}
-      {/* ----------------------------------------------------- */}
 
-      <section className="bg-white border-y border-neutral-200">
-        <div className="max-w-7xl mx-auto px-6 py-24">
-          <h2 className="text-3xl font-semibold text-center">
-            How SkillVibe Works
-          </h2>
+      <div className="mt-12">
+        <SkillMatchDemo />
+      </div>
+
+      <section className="border-y border-white/70 bg-white/70 backdrop-blur-sm">
+        <div className="mx-auto max-w-7xl px-6 py-24">
+          <h2 className="text-center text-3xl font-semibold">How SkillVibe Works</h2>
           <TeamFormationDemo />
 
-          <div className="grid md:grid-cols-3 gap-10 mt-14">
+          <div className="mt-14 grid gap-10 md:grid-cols-3">
             {howItWorks.map((card) => (
               <motion.div
                 key={card.title}
                 whileHover={{ y: -6 }}
                 transition={{ type: "spring", stiffness: 200 }}
-                className="bg-neutral-50 border border-neutral-200 rounded-2xl p-8"
+                className="interactive-card rounded-2xl border border-neutral-200 bg-gradient-to-br from-white to-neutral-50 p-8"
               >
                 <h3 className="text-lg font-semibold">{card.title}</h3>
 
@@ -219,38 +196,27 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ----------------------------------------------------- */}
-      {/* ROLES */}
-      {/* ----------------------------------------------------- */}
+      <section className="mx-auto max-w-7xl px-6 py-24">
+        <h2 className="text-center text-3xl font-semibold">Designed for Every Role</h2>
 
-      <section className="max-w-7xl mx-auto px-6 py-24">
-        <h2 className="text-3xl font-semibold text-center">
-          Designed for Every Role
-        </h2>
-
-        <div className="grid md:grid-cols-3 gap-8 mt-14">
+        <div className="mt-14 grid gap-8 md:grid-cols-3">
           {roles.map((role) => (
-            <div
+            <motion.div
               key={role.title}
-              className={`p-8 rounded-2xl bg-gradient-to-br ${role.gradient} border`}
+              whileHover={{ y: -4 }}
+              className={`interactive-card rounded-2xl border bg-gradient-to-br p-8 ${role.gradient}`}
             >
-              <h3 className="font-semibold text-lg">{role.title}</h3>
+              <h3 className="text-lg font-semibold">{role.title}</h3>
 
               <p className="mt-2 text-sm text-neutral-600">{role.desc}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
 
-      {/* ----------------------------------------------------- */}
-      {/* CTA */}
-      {/* ----------------------------------------------------- */}
-
-      <section className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-24 text-center">
-          <h2 className="text-4xl font-semibold">
-            Build Better Event Teams Today
-          </h2>
+      <section className="bg-gradient-to-r from-purple-700 via-indigo-600 to-teal-500 text-white">
+        <div className="mx-auto max-w-7xl px-6 py-24 text-center">
+          <h2 className="text-4xl font-semibold">Build Better Event Teams Today</h2>
 
           <p className="mt-4 text-white/90">
             Join SkillVibe and experience governance-driven collaboration.
@@ -258,24 +224,19 @@ export default function LandingPage() {
 
           <Link
             href="/register"
-            className="mt-8 inline-block bg-white text-black px-6 py-3 rounded-lg hover:scale-105 transition"
+            className="mt-8 inline-block rounded-2xl bg-white px-6 py-3.5 text-black shadow-lg transition hover:scale-[1.03]"
           >
             Create Account
           </Link>
         </div>
       </section>
 
-      {/* ----------------------------------------------------- */}
-      {/* FOOTER */}
-      {/* ----------------------------------------------------- */}
-
       <footer className="bg-neutral-900 text-neutral-400">
-        <div className="max-w-7xl mx-auto px-6 py-10 flex justify-between text-sm">
+        <div className="mx-auto flex max-w-7xl justify-between px-6 py-10 text-sm">
           <span>© {new Date().getFullYear()} SkillVibe</span>
-
           <span>Governance Driven Team Platform</span>
         </div>
       </footer>
-    </main>
+    </motion.main>
   );
 }

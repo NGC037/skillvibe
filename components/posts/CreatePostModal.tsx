@@ -21,6 +21,7 @@ export default function CreatePostModal({
   const [description, setDescription] = useState("");
   const [skills, setSkills] = useState<Skill[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [skillQuery, setSkillQuery] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -35,6 +36,24 @@ export default function CreatePostModal({
         ? prev.filter((id) => id !== skillId)
         : [...prev, skillId]
     );
+  };
+
+  const handleAddSkill = () => {
+    const normalizedQuery = skillQuery.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return;
+    }
+
+    const matchedSkill = skills.find(
+      (skill) => skill.name.toLowerCase() === normalizedQuery,
+    );
+
+    if (matchedSkill && !selectedSkills.includes(matchedSkill.id)) {
+      setSelectedSkills((prev) => [...prev, matchedSkill.id]);
+    }
+
+    setSkillQuery("");
   };
 
   const createPost = async () => {
@@ -93,6 +112,48 @@ export default function CreatePostModal({
               <p className="text-sm font-medium mb-2">
                 Required Skills
               </p>
+
+              <div className="mb-3 flex gap-2">
+                <input
+                  type="text"
+                  value={skillQuery}
+                  onChange={(e) => setSkillQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddSkill();
+                    }
+                  }}
+                  placeholder="Type an existing skill and press Add"
+                  className="w-full border rounded-lg p-2"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddSkill}
+                  className="px-4 py-2 rounded-lg bg-neutral-900 text-white"
+                >
+                  Add
+                </button>
+              </div>
+
+              {selectedSkills.length > 0 ? (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {selectedSkills.map((skillId) => {
+                    const selectedSkill = skills.find((skill) => skill.id === skillId);
+
+                    return (
+                      <button
+                        key={skillId}
+                        type="button"
+                        onClick={() => toggleSkill(skillId)}
+                        className="px-3 py-1 rounded-full text-sm bg-purple-600 text-white"
+                      >
+                        {selectedSkill?.name ?? "Selected skill"} x
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
 
               <div className="flex flex-wrap gap-2">
                 {skills.map((skill) => (

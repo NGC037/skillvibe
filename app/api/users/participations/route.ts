@@ -46,6 +46,46 @@ export async function POST(request: Request) {
 
     const { eventId } = await request.json();
 
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        id: true,
+        maxParticipants: true,
+      },
+    });
+
+    if (!event) {
+      return NextResponse.json(
+        { error: "Event not found" },
+        { status: 404 }
+      );
+    }
+
+    if (event.maxParticipants) {
+      const participantCount = await prisma.participation.count({
+        where: {
+          eventId,
+        },
+      });
+
+      const existingParticipation = await prisma.participation.findUnique({
+        where: {
+          userId_eventId: {
+            userId: session.user.id,
+            eventId,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!existingParticipation && participantCount >= event.maxParticipants) {
+        return NextResponse.json(
+          { error: "Event has reached its participant limit" },
+          { status: 403 }
+        );
+      }
+    }
+
     await prisma.participation.upsert({
       where: {
         userId_eventId: {
