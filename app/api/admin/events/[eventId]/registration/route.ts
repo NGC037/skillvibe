@@ -1,19 +1,29 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { PrismaClient } from "@prisma/client";
+import { Role } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
-const prisma = new PrismaClient();
-
-export async function PATCH(req: Request, { params }: any) {
+export async function PATCH(
+  req: Request,
+  props: { params: Promise<{ eventId: string }> },
+) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || session.user.role !== "ADMIN") {
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (session.user.role !== Role.ADMIN) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const { eventId } = await params;
+    const { eventId } = await props.params;
+
+    if (!eventId) {
+      return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
+    }
 
     const body = await req.json();
     const { externalLink, isRegistrationOpen } = body;
