@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ProfilePanel from "@/components/profile/ProfilePanel";
+import SkillEndorsementModal from "@/components/mentor/SkillEndorsementModal";
 
 type Mentee = {
   id: string;
@@ -13,6 +14,8 @@ type Mentee = {
   skills: Array<{
     id: string;
     name: string;
+    level?: string;
+    endorsed?: boolean;
   }>;
 };
 
@@ -24,6 +27,7 @@ export default function MenteeGrid({
   mentorId: string;
 }) {
   const [selectedMentee, setSelectedMentee] = useState<Mentee | null>(null);
+  const [endorseMentee, setEndorseMentee] = useState<Mentee | null>(null);
 
   if (mentees.length === 0) {
     return (
@@ -32,6 +36,35 @@ export default function MenteeGrid({
       </div>
     );
   }
+
+  const handleEndorse = async (skillIds: string[]) => {
+    if (!endorseMentee) return;
+
+    try {
+      const response = await fetch("/api/mentor/endorse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: endorseMentee.id,
+          skillIds: skillIds,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to endorse skills");
+      }
+
+      // Update UI - refresh mentee data
+      setEndorseMentee(null);
+      // In a real app, you'd refetch or update local state here
+    } catch (error) {
+      console.error("Endorsement error:", error);
+      alert(
+        `Error: ${error instanceof Error ? error.message : "Failed to endorse"}`,
+      );
+    }
+  };
 
   return (
     <>
@@ -75,15 +108,32 @@ export default function MenteeGrid({
                 mentee.skills.map((skill) => (
                   <span
                     key={skill.id}
-                    className="rounded-full bg-neutral-900 px-3 py-1 text-xs text-white"
+                    className={`rounded-full px-3 py-1 text-xs ${
+                      skill.endorsed
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-neutral-900 text-white"
+                    }`}
                   >
                     {skill.name}
+                    {skill.endorsed && " ✓"}
                   </span>
                 ))
               ) : (
-                <span className="text-sm text-neutral-500">No skills added yet.</span>
+                <span className="text-sm text-neutral-500">
+                  No skills added yet.
+                </span>
               )}
             </div>
+
+            {mentee.skills.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setEndorseMentee(mentee)}
+                className="mt-4 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition"
+              >
+                Endorse Skills
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -96,6 +146,13 @@ export default function MenteeGrid({
         name={selectedMentee?.name}
         email={selectedMentee?.email}
         isEditable={false}
+      />
+
+      <SkillEndorsementModal
+        open={Boolean(endorseMentee)}
+        onClose={() => setEndorseMentee(null)}
+        mentee={endorseMentee || { id: "", name: "", skills: [] }}
+        onSubmit={handleEndorse}
       />
     </>
   );

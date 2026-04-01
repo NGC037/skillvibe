@@ -30,6 +30,9 @@ export default async function MentorPage() {
           division: true,
           skills: {
             select: {
+              id: true,
+              level: true,
+              endorsed: true,
               skill: {
                 select: {
                   id: true,
@@ -75,7 +78,9 @@ export default async function MentorPage() {
         <div className="surface-card p-8">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-semibold text-neutral-900">Assigned Students</h2>
+              <h2 className="text-2xl font-semibold text-neutral-900">
+                Assigned Students
+              </h2>
               <p className="mt-1 text-sm text-neutral-500">
                 Read-only view of the students mapped to your mentorship.
               </p>
@@ -98,6 +103,8 @@ export default async function MentorPage() {
               skills: entry.student.skills.map((skillEntry) => ({
                 id: skillEntry.skill.id,
                 name: skillEntry.skill.name,
+                level: skillEntry.level,
+                endorsed: skillEntry.endorsed,
               })),
             }))}
           />
