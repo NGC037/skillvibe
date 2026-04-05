@@ -43,6 +43,8 @@ model User {
   notifications    Notification[]
   mentorAssignments MentorMentee[]    @relation("Mentor")
   menteeAssignment MentorMentee?      @relation("Student")
+  assignedTasks    Task[]
+  progressLogs     ProgressLog[]
 }
 
 model Avatar {
@@ -135,6 +137,7 @@ model Team {
   leader    User         @relation("TeamLeader", fields: [leaderId], references: [id])
   members   TeamMember[]
   joinRequests TeamJoinRequest[]
+  project   Project?
 }
 
 model TeamMember {
@@ -201,9 +204,13 @@ model Project {
   currentPhase     Int               @default(1)
   createdAt        DateTime          @default(now())
   ownerId          String
+  teamId           String?           @unique
   owner            User              @relation(fields: [ownerId], references: [id])
+  team             Team?             @relation(fields: [teamId], references: [id], onDelete: Cascade)
   interests        ProjectInterest[]
   members          ProjectMember[]
+  tasks            Task[]
+  progressLogs     ProgressLog[]
 }
 
 model ProjectMember {
@@ -290,6 +297,29 @@ model MentorMentee {
   student   User   @relation("Student", fields: [studentId], references: [id], onDelete: Cascade)
 }
 
+model Task {
+  id          String     @id @default(uuid())
+  projectId   String
+  title       String
+  description String?
+  assignedToId String?
+  status      TaskStatus @default(TODO)
+  createdAt   DateTime   @default(now())
+  completedAt DateTime?
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo  User?      @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+}
+
+model ProgressLog {
+  id        String   @id @default(uuid())
+  projectId String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 enum Role {
   STUDENT
   MENTOR
@@ -306,4 +336,10 @@ enum ParticipationStatus {
   INTERESTED
   CONFIRMED
   PENDING
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
 }

@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ teamId: string }> },
@@ -17,38 +19,26 @@ export async function GET(
     const { teamId } = await params;
 
     if (!teamId) {
-      return NextResponse.json({ error: "Team ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Team ID is required" },
+        { status: 400 },
+      );
     }
 
     const team = await prisma.team.findUnique({
       where: { id: teamId },
-      select: {
-        id: true,
-        leaderId: true,
-        isLocked: true,
+      include: {
         members: {
-          select: {
-            id: true,
-            userId: true,
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
+          include: {
+            user: true,
           },
         },
-        event: {
-          select: {
-            id: true,
-            title: true,
-            minTeamSize: true,
-            maxTeamSize: true,
-          },
-        },
+        event: true,
+        leader: true,
       },
     });
+
+    console.log("TEAM FROM DB:", team);
 
     if (!team) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
@@ -58,13 +48,16 @@ export async function GET(
       team.leaderId === session.user.id ||
       team.members.some((member) => member.userId === session.user.id);
 
-    if (!isMember) {
+    if (!isMember && session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    return NextResponse.json(team);
+    return NextResponse.json(team, { status: 200 });
   } catch (error) {
     console.error("GET TEAM ERROR:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

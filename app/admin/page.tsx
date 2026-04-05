@@ -168,6 +168,12 @@ export default async function AdminPage() {
 
             <div className="flex flex-wrap gap-3">
               <Link
+                href="/dashboard/admin/workspaces"
+                className="rounded-xl bg-teal-500 px-4 py-2.5 text-white shadow-sm transition hover:bg-teal-600"
+              >
+                Workspace Dashboard
+              </Link>
+              <Link
                 href="/api/admin/export/participants"
                 className="rounded-xl bg-neutral-900 px-4 py-2.5 text-white shadow-sm transition hover:bg-black"
               >
