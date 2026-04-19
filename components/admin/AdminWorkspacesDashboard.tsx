@@ -45,6 +45,10 @@ type WorkspaceTeam = {
 
 interface AdminWorkspacesDashboardProps {
   teams: WorkspaceTeam[];
+  title?: string;
+  description?: string;
+  showHero?: boolean;
+  showInsights?: boolean;
 }
 
 type RankedWorkspace = {
@@ -64,6 +68,10 @@ type RankedWorkspace = {
 
 export default function AdminWorkspacesDashboard({
   teams,
+  title = "Workspace Command Center",
+  description = "Compare delivery momentum, contribution quality, and workspace health across every team.",
+  showHero = true,
+  showInsights = true,
 }: AdminWorkspacesDashboardProps) {
   const rankedTeams: RankedWorkspace[] = teams
     .map((team) => {
@@ -155,41 +163,45 @@ export default function AdminWorkspacesDashboard({
 
   return (
     <div className="mx-auto max-w-7xl space-y-10">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="overflow-hidden rounded-[1.75rem] border border-white/20 bg-gradient-to-br from-purple-700 via-indigo-600 to-teal-500 p-8 text-white shadow-[0_24px_70px_-30px_rgba(79,70,229,0.55)]"
-      >
-        <h1 className="text-3xl font-bold">Workspace Command Center</h1>
-        <p className="mt-2 max-w-3xl text-white/85">
-          Compare delivery momentum, contribution quality, and workspace health across every team.
-        </p>
-      </motion.div>
+      {showHero ? (
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="overflow-hidden rounded-[1.75rem] border border-white/20 bg-gradient-to-br from-purple-700 via-indigo-600 to-teal-500 p-8 text-white shadow-[0_24px_70px_-30px_rgba(79,70,229,0.55)]"
+        >
+          <h1 className="text-3xl font-bold">{title}</h1>
+          <p className="mt-2 max-w-3xl text-white/85">{description}</p>
+        </motion.div>
+      ) : null}
 
-      <div className="grid gap-6 md:grid-cols-4">
-        <InsightCard label="Total Teams" value={`${totalTeams}`} />
-        <InsightCard label="Teams At Risk" value={`${teamsAtRisk}`} />
-        <InsightCard label="Best Team" value={bestPerformingTeam} />
-        <InsightCard label="Avg Completion" value={`${averageCompletion}%`} />
-      </div>
+      {showInsights ? (
+        <div className="grid gap-6 md:grid-cols-4">
+          <InsightCard label="Total Teams" value={`${totalTeams}`} />
+          <InsightCard label="Teams At Risk" value={`${teamsAtRisk}`} />
+          <InsightCard label="Best Team" value={bestPerformingTeam} />
+          <InsightCard label="Avg Completion" value={`${averageCompletion}%`} />
+        </div>
+      ) : null}
 
       {rankedTeams.length === 0 ? (
-        <div className="backdrop-blur-md bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded-2xl p-10 text-center">
-          <h2 className="text-2xl font-semibold text-white">No workspaces yet</h2>
-          <p className="mt-2 text-sm text-gray-300">
-            Team workspace analytics will appear here once projects, tasks, and logs start flowing.
+        <div className="rounded-2xl border border-neutral-200 bg-white/92 p-10 text-center shadow-[0_20px_45px_-35px_rgba(15,23,42,0.35)] backdrop-blur-md">
+          <h2 className="text-2xl font-semibold text-neutral-900">No workspaces yet</h2>
+          <p className="mt-2 text-sm text-neutral-600">
+            Team workspace analytics will appear here once projects, tasks, and logs start
+            flowing.
           </p>
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           {rankedTeams.map((team, index) => {
-            const rankBadge = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`;
+            const rankBadge =
+              index === 0 ? "Rank 1" : index === 1 ? "Rank 2" : index === 2 ? "Rank 3" : `#${index + 1}`;
             const statusStyles =
               team.status === "Healthy"
-                ? "bg-emerald-400/15 text-emerald-200 border-emerald-300/30"
+                ? "bg-emerald-100 text-emerald-700 border-emerald-200"
                 : team.status === "Moderate"
-                  ? "bg-amber-400/15 text-amber-200 border-amber-300/30"
-                  : "bg-rose-400/15 text-rose-200 border-rose-300/30";
+                  ? "bg-amber-100 text-amber-700 border-amber-200"
+                  : "bg-rose-100 text-rose-700 border-rose-200";
 
             return (
               <motion.div
@@ -197,18 +209,20 @@ export default function AdminWorkspacesDashboard({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.04 }}
-                className={`backdrop-blur-md border rounded-2xl p-6 transition-all ${
+                className={`rounded-2xl border p-6 transition-all backdrop-blur-md ${
                   index === 0
-                    ? "bg-gradient-to-br from-white/15 to-white/5 border-teal-300/35 shadow-[0_20px_50px_-30px_rgba(45,212,191,0.45)]"
-                    : "bg-gradient-to-br from-white/10 to-white/5 border-white/20 hover:shadow-xl hover:shadow-purple-500/10"
+                    ? "border-teal-200 bg-gradient-to-br from-white to-teal-50 shadow-[0_20px_50px_-30px_rgba(45,212,191,0.28)]"
+                    : "border-neutral-200 bg-gradient-to-br from-white to-neutral-50 hover:shadow-xl hover:shadow-purple-500/10"
                 }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{rankBadge}</span>
+                    <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white">
+                      {rankBadge}
+                    </span>
                     <div>
-                      <h2 className="text-xl font-semibold text-white">{team.teamName}</h2>
-                      <p className="mt-1 text-sm text-gray-300">
+                      <h2 className="text-xl font-semibold text-neutral-900">{team.teamName}</h2>
+                      <p className="mt-1 text-sm text-neutral-600">
                         {team.projectTitle ?? "No workspace project yet"}
                       </p>
                     </div>
@@ -222,10 +236,7 @@ export default function AdminWorkspacesDashboard({
                 </div>
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <MetricBlock
-                    label="Completion"
-                    value={`${team.completionPercentage}%`}
-                  />
+                  <MetricBlock label="Completion" value={`${team.completionPercentage}%`} />
                   <MetricBlock
                     label="Tasks Completed"
                     value={`${team.completedTasks}/${team.totalTasks}`}
@@ -239,11 +250,11 @@ export default function AdminWorkspacesDashboard({
                 </div>
 
                 <div className="mt-5">
-                  <div className="mb-2 flex items-center justify-between text-sm text-gray-300">
+                  <div className="mb-2 flex items-center justify-between text-sm text-neutral-600">
                     <span>Ranking score</span>
                     <span>{team.score.toLocaleString()}</span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full border border-white/10 bg-white/10">
+                  <div className="h-2 w-full overflow-hidden rounded-full border border-neutral-200 bg-neutral-100">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-400 to-teal-400"
                       style={{
@@ -256,8 +267,9 @@ export default function AdminWorkspacesDashboard({
                       }}
                     />
                   </div>
-                  <p className="mt-3 text-xs text-gray-400">
-                    Avg contribution: {team.averageContributionScore} | logs weight: {Math.max(1, team.logsCount)}
+                  <p className="mt-3 text-xs text-neutral-500">
+                    Avg contribution: {team.averageContributionScore} | logs weight:{" "}
+                    {Math.max(1, team.logsCount)}
                   </p>
                 </div>
               </motion.div>
@@ -271,9 +283,9 @@ export default function AdminWorkspacesDashboard({
 
 function InsightCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="backdrop-blur-md bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded-2xl p-6 hover:shadow-xl hover:shadow-purple-500/10 transition-all">
-      <p className="text-sm text-gray-300">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-white">{value}</p>
+    <div className="rounded-2xl border border-neutral-200 bg-white/92 p-6 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.25)] backdrop-blur-md transition-all hover:shadow-xl hover:shadow-purple-500/10">
+      <p className="text-sm text-neutral-600">{label}</p>
+      <p className="mt-2 text-3xl font-bold text-neutral-900">{value}</p>
     </div>
   );
 }
@@ -288,10 +300,10 @@ function MetricBlock({
   subValue?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-gray-400">{label}</p>
-      <p className="mt-2 text-lg font-semibold text-white">{value}</p>
-      {subValue ? <p className="mt-1 text-xs text-gray-400">{subValue}</p> : null}
+    <div className="rounded-2xl border border-neutral-200 bg-white/85 p-4">
+      <p className="text-xs uppercase tracking-[0.18em] text-neutral-500">{label}</p>
+      <p className="mt-2 text-lg font-semibold text-neutral-900">{value}</p>
+      {subValue ? <p className="mt-1 text-xs text-neutral-500">{subValue}</p> : null}
     </div>
   );
 }

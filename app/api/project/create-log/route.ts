@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getWorkspaceAccessByProjectId } from "@/lib/workspace-access";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -21,49 +23,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
+    const access = await getWorkspaceAccessByProjectId(
+      session.user.email,
+      projectId,
+    );
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!access) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        team: {
-          include: {
-            members: true,
-            leader: true,
-          },
-        },
+    const hasAssignedTask = await prisma.task.findFirst({
+      where: {
+        projectId,
+        assignedToId: access.user.id,
+      },
+      select: {
+        id: true,
       },
     });
 
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    if (!project.team) {
+    if (!access.isLeader && !access.isAdmin && !hasAssignedTask) {
       return NextResponse.json(
-        { error: "Project is not associated with a team" },
-        { status: 400 },
+        { error: "You can only post logs after receiving an assigned task." },
+        { status: 403 },
       );
-    }
-
-    const isMember =
-      project.team.members.some((member) => member.userId === user.id) ||
-      project.team.leaderId === user.id;
-    if (!isMember && user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
     const recentLog = await prisma.progressLog.findFirst({
       where: {
         projectId,
-        userId: user.id,
+        userId: access.user.id,
         createdAt: {
           gte: oneMinuteAgo,
         },
@@ -83,7 +73,7 @@ export async function POST(request: NextRequest) {
     const log = await prisma.progressLog.create({
       data: {
         projectId,
-        userId: user.id,
+        userId: access.user.id,
         content: normalizedContent,
       },
       include: {

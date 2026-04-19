@@ -110,22 +110,24 @@ export default function PostsPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="surface-card-strong overflow-hidden p-8 text-white"
+        className="surface-card-strong relative overflow-hidden p-8 text-white"
       >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.16),_transparent_24%),linear-gradient(135deg,_rgba(76,29,149,0.92),_rgba(79,70,229,0.9),_rgba(13,148,136,0.82))]" />
+        <div className="absolute inset-0 bg-black/10" />
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-purple-200">
+          <div className="relative z-10">
+            <p className="text-xs uppercase tracking-[0.24em] text-white/75">
               Collaboration board
             </p>
-            <h1 className="mt-3 text-3xl font-bold">Skill Requests</h1>
-            <p className="mt-2 max-w-2xl text-purple-100">
+            <h1 className="mt-3 text-3xl font-bold text-white">Skill Requests</h1>
+            <p className="mt-2 max-w-2xl text-white/88">
               Discover teammates and collaborate on upcoming events.
             </p>
           </div>
 
           <button
             onClick={() => setModalOpen(true)}
-            className="rounded-2xl bg-white px-5 py-3 font-medium text-purple-700 shadow-lg transition hover:scale-[1.02]"
+            className="relative z-10 rounded-2xl bg-white px-5 py-3 font-medium text-purple-700 shadow-lg transition hover:scale-[1.02]"
           >
             + Create Skill Request
           </button>

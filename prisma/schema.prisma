@@ -45,6 +45,7 @@ model User {
   menteeAssignment MentorMentee?      @relation("Student")
   assignedTasks    Task[]
   progressLogs     ProgressLog[]
+  certificates     Certificate[]
 }
 
 model Avatar {
@@ -104,12 +105,34 @@ model Event {
   maxTeamSize        Int
   maxParticipants    Int?
   createdAt          DateTime           @default(now())
+  registrationStartDate DateTime?
+  registrationEndDate DateTime?
   externalLink       String?
+  posterUrl          String?
   isRegistrationOpen Boolean            @default(false)
   eventSkills        EventSkill[]
   participations     Participation[]
   skillPosts         SkillRequestPost[]
   teams              Team[]
+  certificates       Certificate[]
+}
+
+model Certificate {
+  id              String          @id @default(cuid())
+  userId          String
+  eventId         String?
+  title           String
+  eventName       String
+  type            CertificateType
+  fileUrl         String
+  fileName        String
+  mimeType        String
+  fileSize        Int
+  isSkillVibeEvent Boolean        @default(false)
+  coinsAwarded    Int             @default(0)
+  createdAt       DateTime        @default(now())
+  event           Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Participation {
@@ -342,4 +365,9 @@ enum TaskStatus {
   TODO
   IN_PROGRESS
   DONE
+}
+
+enum CertificateType {
+  WON
+  PARTICIPATED
 }

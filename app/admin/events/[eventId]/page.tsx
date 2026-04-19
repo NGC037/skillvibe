@@ -25,7 +25,14 @@ export default async function EventAnalyticsPage(props: {
         include: { skill: true },
       },
       teams: {
-        include: { members: true },
+        include: {
+          members: true,
+          project: {
+            include: {
+              tasks: true,
+            },
+          },
+        },
       },
     },
   });
@@ -53,6 +60,19 @@ export default async function EventAnalyticsPage(props: {
   const totalTeams = await prisma.team.count({
     where: { eventId },
   });
+  const activeTeams = await prisma.team.count({
+    where: {
+      eventId,
+      OR: [
+        { members: { some: {} } },
+        { project: { isNot: null } },
+      ],
+    },
+  });
+  const allTasks = event.teams.flatMap((team) => team.project?.tasks ?? []);
+  const completedTasks = allTasks.filter((task) => task.status === "DONE").length;
+  const completionRate =
+    allTasks.length === 0 ? 0 : Math.round((completedTasks / allTasks.length) * 100);
 
   const confirmationPercent =
     totalParticipations === 0
@@ -80,6 +100,15 @@ export default async function EventAnalyticsPage(props: {
         </Link>
       </div>
 
+      {event.posterUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={event.posterUrl}
+          alt={event.title}
+          className="h-72 w-full rounded-3xl object-cover border border-neutral-200 shadow-sm"
+        />
+      ) : null}
+
       {/* REQUIRED SKILLS */}
 
       {event.eventSkills.length > 0 && (
@@ -103,7 +132,7 @@ export default async function EventAnalyticsPage(props: {
 
       {/* METRICS */}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         {[
           {
             label: "Total Participations",
@@ -120,6 +149,10 @@ export default async function EventAnalyticsPage(props: {
           {
             label: "Total Teams",
             value: totalTeams,
+          },
+          {
+            label: "Active Teams",
+            value: activeTeams,
           },
         ].map((metric) => (
           <AnimatedCard key={metric.label}>
@@ -156,6 +189,23 @@ export default async function EventAnalyticsPage(props: {
 
           <p className="text-sm text-neutral-500 mt-3">
             {confirmationPercent}% confirmed
+          </p>
+        </div>
+      </AnimatedCard>
+
+      <AnimatedCard>
+        <div className="bg-white border border-neutral-200 rounded-2xl p-6 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Workspace Completion</h2>
+
+          <div className="w-full bg-neutral-100 rounded-full h-3">
+            <div
+              className="bg-linear-to-r from-teal-500 to-emerald-500 h-3 rounded-full transition-all duration-500"
+              style={{ width: `${completionRate}%` }}
+            />
+          </div>
+
+          <p className="text-sm text-neutral-500 mt-3">
+            {completionRate}% of tracked workspace tasks are complete.
           </p>
         </div>
       </AnimatedCard>

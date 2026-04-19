@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import ProfilePanel from "@/components/profile/ProfilePanel";
+import { useRouter } from "next/navigation";
 import SkillEndorsementModal from "@/components/mentor/SkillEndorsementModal";
 
 type Mentee = {
@@ -21,13 +21,11 @@ type Mentee = {
 
 export default function MenteeGrid({
   mentees,
-  mentorId,
 }: {
   mentees: Mentee[];
-  mentorId: string;
 }) {
-  const [selectedMentee, setSelectedMentee] = useState<Mentee | null>(null);
   const [endorseMentee, setEndorseMentee] = useState<Mentee | null>(null);
+  const router = useRouter();
 
   if (mentees.length === 0) {
     return (
@@ -72,6 +70,15 @@ export default function MenteeGrid({
         {mentees.map((mentee) => (
           <div
             key={mentee.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => router.push(`/mentor/mentees/${mentee.id}`)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                router.push(`/mentor/mentees/${mentee.id}`);
+              }
+            }}
             className="interactive-card rounded-2xl border border-neutral-200 bg-gradient-to-br from-white to-neutral-50 p-5"
           >
             <div className="flex items-start justify-between gap-4">
@@ -84,10 +91,13 @@ export default function MenteeGrid({
 
               <button
                 type="button"
-                onClick={() => setSelectedMentee(mentee)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  router.push(`/mentor/mentees/${mentee.id}`);
+                }}
                 className="text-sm text-indigo-600 hover:text-indigo-700"
               >
-                View Profile
+                Open Details
               </button>
             </div>
 
@@ -128,7 +138,10 @@ export default function MenteeGrid({
             {mentee.skills.length > 0 && (
               <button
                 type="button"
-                onClick={() => setEndorseMentee(mentee)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setEndorseMentee(mentee);
+                }}
                 className="mt-4 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition"
               >
                 Endorse Skills
@@ -137,16 +150,6 @@ export default function MenteeGrid({
           </div>
         ))}
       </div>
-
-      <ProfilePanel
-        open={Boolean(selectedMentee)}
-        onClose={() => setSelectedMentee(null)}
-        userId={selectedMentee?.id}
-        currentUserId={mentorId}
-        name={selectedMentee?.name}
-        email={selectedMentee?.email}
-        isEditable={false}
-      />
 
       <SkillEndorsementModal
         open={Boolean(endorseMentee)}

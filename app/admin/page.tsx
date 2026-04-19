@@ -2,7 +2,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import DeleteEventButton from "@/components/admin/DeleteEventButton";
 import Link from "next/link";
 import { calculateConfirmationRatio } from "@/lib/readiness";
 import MotionWrapper from "@/components/ui/MotionWrapper";
@@ -10,13 +9,20 @@ import AnimatedCard from "@/components/ui/AnimatedCard";
 import AdminAnalyticsChart from "@/components/admin/AdminAnalyticsChart";
 import EventHealthChart from "@/components/admin/EventHealthChart";
 import AppLayout from "@/components/layout/AppLayout";
+import AdminEventsPanel from "@/components/admin/AdminEventsPanel";
+import { getEventTimelineStatus } from "@/lib/events";
+import { aggregateEventsByMonth } from "@/lib/admin-analytics";
 
 type RecentEvent = {
   id: string;
   title: string;
+  description: string | null;
   minTeamSize: number;
   maxTeamSize: number;
   createdAt: Date;
+  posterUrl: string | null;
+  registrationStartDate: Date | null;
+  registrationEndDate: Date | null;
   eventSkills: Array<{
     skill: {
       id: string;
@@ -26,6 +32,13 @@ type RecentEvent = {
   participations: Array<{
     status: string;
   }>;
+  teams: Array<{
+    project: {
+      tasks: Array<{
+        status: string;
+      }>;
+    } | null;
+  }>;
 };
 
 type EnrichedRecentEvent = RecentEvent & {
@@ -34,6 +47,12 @@ type EnrichedRecentEvent = RecentEvent & {
   confirmationPercentage: number;
   eventLockEligible: boolean;
   lockWarning: boolean;
+  timelineStatus: "ONGOING" | "UPCOMING" | "PAST";
+  analytics: {
+    participantsCount: number;
+    activeTeams: number;
+    completionRate: number;
+  };
 };
 
 export default async function AdminPage() {
@@ -73,9 +92,17 @@ export default async function AdminPage() {
         include: { skill: true },
       },
       participations: true,
+      teams: {
+        include: {
+          project: {
+            include: {
+              tasks: true,
+            },
+          },
+        },
+      },
     },
-    orderBy: { createdAt: "desc" },
-    take: 5,
+    orderBy: { registrationStartDate: "desc" },
   });
 
   const enrichedRecentEvents: EnrichedRecentEvent[] = recentEvents.map(
@@ -94,6 +121,10 @@ export default async function AdminPage() {
       const eventLockEligible = confirmationPercentage >= 50;
       const lockWarning =
         confirmationPercentage >= 40 && confirmationPercentage < 50;
+      const allTasks = event.teams.flatMap((team) => team.project?.tasks ?? []);
+      const completedTasks = allTasks.filter((task) => task.status === "DONE").length;
+      const completionRate =
+        allTasks.length === 0 ? 0 : Math.round((completedTasks / allTasks.length) * 100);
 
       return {
         ...event,
@@ -102,6 +133,15 @@ export default async function AdminPage() {
         confirmationPercentage,
         eventLockEligible,
         lockWarning,
+        analytics: {
+          participantsCount: currentParticipations,
+          activeTeams: event.teams.length,
+          completionRate,
+        },
+        timelineStatus: getEventTimelineStatus({
+          registrationStartDate: event.registrationStartDate,
+          registrationEndDate: event.registrationEndDate,
+        }),
       };
     },
   );
@@ -143,6 +183,11 @@ export default async function AdminPage() {
   const pendingPercent = calculateConfirmationRatio(
     pendingParticipations,
     totalParticipations,
+  );
+  const monthlyEvents = aggregateEventsByMonth(
+    recentEvents.map(
+      (event) => event.registrationStartDate ?? event.createdAt,
+    ),
   );
 
   return (
@@ -286,10 +331,14 @@ export default async function AdminPage() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <AnimatedCard>
             <div className="surface-card p-6">
-              <h2 className="mb-6 text-xl font-semibold">Participation Analytics</h2>
+              <h2 className="mb-2 text-xl font-semibold text-neutral-900">
+                Events Created Per Month
+              </h2>
+              <p className="mb-6 text-sm text-neutral-500">
+                Monthly view of event creation cadence using current event records.
+              </p>
               <AdminAnalyticsChart
-                confirmed={confirmedParticipations}
-                pending={pendingParticipations}
+                monthlyEvents={monthlyEvents}
               />
             </div>
           </AnimatedCard>
@@ -305,9 +354,14 @@ export default async function AdminPage() {
           </AnimatedCard>
         </div>
 
-        <div className="surface-card p-8">
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Recent Events</h2>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-neutral-900">Events Overview</h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Filter event windows, review posters, and track admin event analytics.
+              </p>
+            </div>
 
             <Link
               href="/admin/events/new"
@@ -317,78 +371,19 @@ export default async function AdminPage() {
             </Link>
           </div>
 
-          <div className="space-y-6">
-            {recentEvents.length === 0 ? (
-              <p className="text-sm text-neutral-500">No events created yet.</p>
-            ) : null}
-
-            {enrichedRecentEvents.map((event) => (
-              <MotionWrapper key={event.id}>
-                <div className="interactive-card rounded-2xl border border-neutral-200 bg-gradient-to-br from-white to-neutral-50 p-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <Link
-                        href={`/admin/events/${event.id}`}
-                        className="text-lg font-semibold hover:text-indigo-600"
-                      >
-                        {event.title}
-                      </Link>
-
-                      <p className="mt-1 text-sm text-neutral-500">
-                        Team Size: {event.minTeamSize} - {event.maxTeamSize}
-                      </p>
-
-                      <p className="mt-1 text-sm text-neutral-500">
-                        Confirmation Rate: {event.confirmationPercentage}%
-                      </p>
-
-                      {event.lockWarning ? (
-                        <span className="mt-2 inline-block rounded-full bg-yellow-100 px-3 py-1 text-xs text-yellow-700">
-                          LOCK APPROACHING
-                        </span>
-                      ) : null}
-
-                      {event.eventLockEligible ? (
-                        <span className="mt-2 inline-block rounded-full bg-neutral-900 px-3 py-1 text-xs text-white">
-                          GOVERNANCE READY
-                        </span>
-                      ) : null}
-
-                      {event.eventSkills.length > 0 ? (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {event.eventSkills.map((eventSkill) => (
-                            <span
-                              key={eventSkill.skill.id}
-                              className="rounded-full bg-indigo-50 px-3 py-1 text-xs text-indigo-600"
-                            >
-                              {eventSkill.skill.name}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="flex flex-col items-end gap-3">
-                      <span className="text-sm text-neutral-400">
-                        {new Date(event.createdAt).toLocaleDateString()}
-                      </span>
-
-                      <div className="flex gap-4">
-                        <Link
-                          href={`/admin/events/${event.id}/edit`}
-                          className="text-sm text-indigo-600"
-                        >
-                          Edit
-                        </Link>
-
-                        <DeleteEventButton eventId={event.id} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </MotionWrapper>
-            ))}
-          </div>
+          <AdminEventsPanel
+            events={enrichedRecentEvents.map((event) => ({
+              id: event.id,
+              title: event.title,
+              description: event.description,
+              posterUrl: event.posterUrl,
+              registrationStartDate: event.registrationStartDate?.toISOString() ?? null,
+              registrationEndDate: event.registrationEndDate?.toISOString() ?? null,
+              timelineStatus: event.timelineStatus,
+              analytics: event.analytics,
+              eventSkills: event.eventSkills,
+            }))}
+          />
         </div>
       </div>
     </AppLayout>

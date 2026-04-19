@@ -2,16 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getWorkspaceAccessByProjectId } from "@/lib/workspace-access";
 
-/**
- * GET /api/project/get-project-by-team?teamId=xxx
- * Gets the project associated with a team (if exists)
- * Only team members can access
- */
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+
+    if (!session?.user?.email || !session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -25,14 +22,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     const team = await prisma.team.findUnique({
       where: { id: teamId },
       include: { members: true, leader: true },
@@ -42,15 +31,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    // Check if user is team member or leader or admin
     const isMember =
-      team.members.some((m) => m.userId === user.id) ||
-      team.leaderId === user.id;
-    if (!isMember && user.role !== "ADMIN") {
+      team.members.some((member) => member.userId === session.user.id) ||
+      team.leaderId === session.user.id;
+
+    if (!isMember && session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Get project
     const project = await prisma.project.findUnique({
       where: { teamId },
       include: {
@@ -68,7 +56,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ data: null }, { status: 200 });
     }
 
-    return NextResponse.json(project, { status: 200 });
+    const access = await getWorkspaceAccessByProjectId(
+      session.user.email,
+      project.id,
+    );
+
+    if (!access) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    return NextResponse.json(
+      {
+        ...project,
+        tasks:
+          access.isLeader || access.isAdmin
+            ? project.tasks
+            : project.tasks.filter((task) => task.assignedToId === access.user.id),
+        currentViewer: {
+          id: access.user.id,
+          canManageTasks: access.isLeader || access.isAdmin,
+          canViewAllTasks: access.isLeader || access.isAdmin,
+          canViewAllLogs: access.isLeader || access.isAdmin,
+        },
+      },
+      { status: 200 },
+    );
   } catch (error) {
     console.error("Error fetching project:", error);
     return NextResponse.json(

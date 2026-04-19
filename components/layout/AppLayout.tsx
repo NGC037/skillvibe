@@ -10,8 +10,10 @@ import NotificationBell from "@/components/NotificationBell";
 
 export default function AppLayout({
   children,
+  hideSidebar = false,
 }: {
   children: React.ReactNode;
+  hideSidebar?: boolean;
 }) {
 
   const pathname = usePathname();
@@ -41,6 +43,7 @@ export default function AppLayout({
 
       {/* SIDEBAR */}
 
+      {!hideSidebar ? (
       <motion.aside
         initial={{ x: -20, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
@@ -98,6 +101,7 @@ export default function AppLayout({
         </nav>
 
       </motion.aside>
+      ) : null}
 
       {/* MAIN AREA */}
 

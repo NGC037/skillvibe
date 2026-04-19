@@ -1,12 +1,13 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import MotionWrapper from "@/components/ui/MotionWrapper";
 import MenteeGrid from "@/components/mentor/MenteeGrid";
+import AdminWorkspacesDashboard from "@/components/admin/AdminWorkspacesDashboard";
+import { getMentorMentees, getMentorWorkspaceTeams } from "@/lib/mentor-data";
 
 export default async function MentorPage() {
   const session = await getServerSession(authOptions);
@@ -17,37 +18,10 @@ export default async function MentorPage() {
     redirect("/dashboard");
   }
 
-  const mentees = await prisma.mentorMentee.findMany({
-    where: { mentorId: session.user.id },
-    include: {
-      student: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          department: true,
-          year: true,
-          division: true,
-          skills: {
-            select: {
-              id: true,
-              level: true,
-              endorsed: true,
-              skill: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    orderBy: {
-      id: "desc",
-    },
-  });
+  const [mentees, workspaceTeams] = await Promise.all([
+    getMentorMentees(session.user.id),
+    getMentorWorkspaceTeams(session.user.id),
+  ]);
 
   return (
     <AppLayout>
@@ -92,21 +66,31 @@ export default async function MentorPage() {
           </div>
 
           <MenteeGrid
-            mentorId={session.user.id}
-            mentees={mentees.map((entry) => ({
-              id: entry.student.id,
-              name: entry.student.name,
-              email: entry.student.email,
-              department: entry.student.department,
-              year: entry.student.year,
-              division: entry.student.division,
-              skills: entry.student.skills.map((skillEntry) => ({
-                id: skillEntry.skill.id,
-                name: skillEntry.skill.name,
-                level: skillEntry.level,
-                endorsed: skillEntry.endorsed,
-              })),
-            }))}
+            mentees={mentees}
+          />
+        </div>
+
+        <div className="surface-card overflow-hidden bg-slate-950 p-8">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-semibold text-white">
+                Mentee Workspaces
+              </h2>
+              <p className="mt-1 text-sm text-slate-300">
+                Read-only workspace board for teams that include your mentees.
+              </p>
+            </div>
+
+            <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white">
+              {workspaceTeams.length} boards
+            </div>
+          </div>
+
+          <AdminWorkspacesDashboard
+            teams={workspaceTeams}
+            showHero={false}
+            title="Mentee Workspace Board"
+            description="Focused read-only workspace board for the students under your mentorship."
           />
         </div>
       </div>

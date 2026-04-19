@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  getAssignableMembers,
+  getWorkspaceAccessByProjectId,
+} from "@/lib/workspace-access";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -23,55 +28,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
+    const access = await getWorkspaceAccessByProjectId(
+      session.user.email,
+      projectId,
+    );
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        team: {
-          include: {
-            members: true,
-            leader: true,
-          },
-        },
-      },
-    });
-
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    if (!project.team) {
-      return NextResponse.json(
-        { error: "Project is not associated with a team" },
-        { status: 400 },
-      );
-    }
-
-    const isMember =
-      project.team.members.some((member) => member.userId === user.id) ||
-      project.team.leaderId === user.id;
-    if (!isMember && user.role !== "ADMIN") {
+    if (!access) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    if (assignedToId) {
-      const isAssignableUser =
-        project.team.leaderId === assignedToId ||
-        project.team.members.some((member) => member.userId === assignedToId);
+    if (!access.isLeader && !access.isAdmin) {
+      return NextResponse.json(
+        { error: "Only the team leader can create and assign tasks." },
+        { status: 403 },
+      );
+    }
 
-      if (!isAssignableUser) {
-        return NextResponse.json(
-          { error: "Task can only be assigned to team members." },
-          { status: 400 },
-        );
-      }
+    const assignableMembers = getAssignableMembers(access);
+    const isAssignableUser = assignedToId
+      ? assignableMembers.some((member) => member.id === assignedToId)
+      : true;
+
+    if (!isAssignableUser) {
+      return NextResponse.json(
+        { error: "Task can only be assigned to team members." },
+        { status: 400 },
+      );
     }
 
     const task = await prisma.task.create({

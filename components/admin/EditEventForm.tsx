@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatDateForInput } from "@/lib/events";
 
 interface Skill {
   id: string;
@@ -18,6 +19,10 @@ interface EventType {
   description: string | null;
   minTeamSize: number;
   maxTeamSize: number;
+  registrationStartDate: Date | null;
+  registrationEndDate: Date | null;
+  externalLink: string | null;
+  posterUrl: string | null;
   eventSkills: EventSkill[];
 }
 
@@ -40,6 +45,16 @@ export default function EditEventForm({
   const [maxTeamSize, setMaxTeamSize] = useState<number>(
     event.maxTeamSize
   );
+  const [registrationStart, setRegistrationStart] = useState<string>(
+    formatDateForInput(event.registrationStartDate)
+  );
+  const [registrationEnd, setRegistrationEnd] = useState<string>(
+    formatDateForInput(event.registrationEndDate)
+  );
+  const [registrationLink, setRegistrationLink] = useState<string>(
+    event.externalLink || ""
+  );
+  const [eventPoster, setEventPoster] = useState<File | null>(null);
 
   const [selectedSkills, setSelectedSkills] = useState<string[]>(
     event.eventSkills.map((es) => es.skill.name)
@@ -56,20 +71,24 @@ export default function EditEventForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("minTeamSize", String(minTeamSize));
+    formData.append("maxTeamSize", String(maxTeamSize));
+    formData.append("registrationStart", registrationStart);
+    formData.append("registrationEnd", registrationEnd);
+    formData.append("officialRegistrationLink", registrationLink);
+    selectedSkills.forEach((skill) => formData.append("requiredSkills", skill));
+    if (eventPoster) {
+      formData.append("eventPoster", eventPoster);
+    }
+
     const res = await fetch(
       `/api/admin/events/${event.id}`,
       {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          description,
-          minTeamSize,
-          maxTeamSize,
-          requiredSkills: selectedSkills,
-        }),
+        body: formData,
       }
     );
 
@@ -172,6 +191,93 @@ export default function EditEventForm({
               }
             />
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label
+              htmlFor="registrationStart"
+              className="block text-sm font-medium mb-2"
+            >
+              Registration Start
+            </label>
+            <input
+              id="registrationStart"
+              type="date"
+              className="w-full border border-neutral-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-600 outline-none"
+              value={registrationStart}
+              onChange={(e) =>
+                setRegistrationStart(e.target.value)
+              }
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="registrationEnd"
+              className="block text-sm font-medium mb-2"
+            >
+              Registration End
+            </label>
+            <input
+              id="registrationEnd"
+              type="date"
+              className="w-full border border-neutral-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-600 outline-none"
+              value={registrationEnd}
+              onChange={(e) =>
+                setRegistrationEnd(e.target.value)
+              }
+              required
+            />
+          </div>
+        </div>
+
+        <div>
+          <label
+            htmlFor="registrationLink"
+            className="block text-sm font-medium mb-2"
+          >
+            Official Registration Link
+          </label>
+          <input
+            id="registrationLink"
+            type="url"
+            className="w-full border border-neutral-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-600 outline-none"
+            value={registrationLink}
+            onChange={(e) =>
+              setRegistrationLink(e.target.value)
+            }
+            placeholder="https://event-registration-link.com"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="eventPoster"
+            className="block text-sm font-medium mb-2"
+          >
+            Replace Poster
+          </label>
+
+          {event.posterUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={event.posterUrl}
+              alt={event.title}
+              className="mb-3 h-44 w-full rounded-xl object-cover border border-neutral-200"
+            />
+          ) : null}
+
+          <input
+            id="eventPoster"
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            className="w-full border border-neutral-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-600 outline-none"
+            onChange={(e) =>
+              setEventPoster(e.target.files?.[0] ?? null)
+            }
+          />
         </div>
 
         {/* SKILLS */}

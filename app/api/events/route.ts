@@ -1,8 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getEventTimelineStatus, type EventTimelineStatus } from "@/lib/events";
 
-export async function GET() {
+const validStatuses = new Set<EventTimelineStatus>(["ONGOING", "UPCOMING", "PAST"]);
+
+export async function GET(req: NextRequest) {
   try {
+    const statusParam = req.nextUrl.searchParams.get("status");
+    const requestedStatus =
+      statusParam && validStatuses.has(statusParam as EventTimelineStatus)
+        ? (statusParam as EventTimelineStatus)
+        : null;
+
     const events = await prisma.event.findMany({
       include: {
         eventSkills: {
@@ -11,26 +20,37 @@ export async function GET() {
           },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ registrationStartDate: "asc" }, { createdAt: "desc" }],
     });
 
-    const formatted = events.map((event) => ({
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      minTeamSize: event.minTeamSize,
-      maxTeamSize: event.maxTeamSize,
-      requiredSkills: event.eventSkills.map(
-        (es) => es.skill.name
-      ),
-    }));
+    const formattedEvents = events
+      .map((event) => {
+        const timelineStatus = getEventTimelineStatus({
+          registrationStartDate: event.registrationStartDate,
+          registrationEndDate: event.registrationEndDate,
+        });
 
-    return NextResponse.json(formatted);
+        return {
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          minTeamSize: event.minTeamSize,
+          maxTeamSize: event.maxTeamSize,
+          posterUrl: event.posterUrl,
+          externalLink: event.externalLink,
+          registrationStartDate: event.registrationStartDate?.toISOString() ?? null,
+          registrationEndDate: event.registrationEndDate?.toISOString() ?? null,
+          requiredSkills: event.eventSkills.map((eventSkill) => eventSkill.skill.name),
+          timelineStatus,
+        };
+      })
+      .filter((event) =>
+        requestedStatus ? event.timelineStatus === requestedStatus : event.timelineStatus !== "PAST",
+      );
+
+    return NextResponse.json({ events: formattedEvents });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "Failed to fetch events" },
-      { status: 500 }
-    );
+    console.error("EVENTS API ERROR:", error);
+    return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 });
   }
 }

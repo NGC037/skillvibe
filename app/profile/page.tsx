@@ -6,6 +6,7 @@ import SkillSelector from "@/components/skills/SkillSelector";
 import MotionWrapper from "@/components/ui/MotionWrapper";
 import AvatarPreview from "@/components/profile/AvatarPreview";
 import AvatarCustomizerModal from "@/components/profile/AvatarCustomizerModal";
+import CertificateManager from "@/components/profile/CertificateManager";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
@@ -435,6 +436,10 @@ export default function ProfilePage() {
 
             <SkillSelector isEditing={isEditing} />
           </div>
+        </MotionWrapper>
+
+        <MotionWrapper>
+          <CertificateManager onCoinsChange={setCoins} />
         </MotionWrapper>
 
         <MotionWrapper>

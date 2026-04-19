@@ -23,6 +23,9 @@ export default function CreateEventPage() {
   const [skills, setSkills] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [registrationLink, setRegistrationLink] = useState("");
+  const [registrationStart, setRegistrationStart] = useState("");
+  const [registrationEnd, setRegistrationEnd] = useState("");
+  const [eventPoster, setEventPoster] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
   /* ===========================
@@ -57,19 +60,22 @@ export default function CreateEventPage() {
     e.preventDefault();
     setLoading(true);
 
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("minTeamSize", String(minTeamSize));
+    formData.append("maxTeamSize", String(maxTeamSize));
+    formData.append("officialRegistrationLink", registrationLink);
+    formData.append("registrationStart", registrationStart);
+    formData.append("registrationEnd", registrationEnd);
+    selectedSkills.forEach((skill) => formData.append("requiredSkills", skill));
+    if (eventPoster) {
+      formData.append("eventPoster", eventPoster);
+    }
+
     const res = await fetch("/api/admin/events", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title,
-        description,
-        minTeamSize: Number(minTeamSize),
-        maxTeamSize: Number(maxTeamSize),
-        requiredSkills: selectedSkills,
-        officialRegistrationLink: registrationLink,
-      }),
+      body: formData,
     });
 
     if (res.ok) {
@@ -192,6 +198,44 @@ export default function CreateEventPage() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <label
+                htmlFor="registrationStart"
+                className="block text-sm font-medium mb-2"
+              >
+                Registration Start
+              </label>
+
+              <input
+                id="registrationStart"
+                type="date"
+                className="w-full border border-neutral-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                value={registrationStart}
+                onChange={(e) => setRegistrationStart(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="registrationEnd"
+                className="block text-sm font-medium mb-2"
+              >
+                Registration End
+              </label>
+
+              <input
+                id="registrationEnd"
+                type="date"
+                className="w-full border border-neutral-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                value={registrationEnd}
+                onChange={(e) => setRegistrationEnd(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
           {/* REQUIRED SKILLS */}
 
           <div>
@@ -213,6 +257,23 @@ export default function CreateEventPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="eventPoster"
+              className="block text-sm font-medium mb-2"
+            >
+              Event Poster
+            </label>
+
+            <input
+              id="eventPoster"
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              className="w-full border border-neutral-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+              onChange={(e) => setEventPoster(e.target.files?.[0] ?? null)}
+            />
           </div>
 
           {/* OFFICIAL REGISTRATION LINK */}

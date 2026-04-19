@@ -35,7 +35,9 @@ export default function EventHealthChart({
             data={data}
             dataKey="value"
             outerRadius={90}
-            label
+            label={({ name, percent }) =>
+              `${name} ${Math.round((percent ?? 0) * 100)}%`
+            }
           >
 
             {data.map((entry, index) => (
@@ -47,7 +49,13 @@ export default function EventHealthChart({
 
           </Pie>
 
-          <Tooltip />
+          <Tooltip
+            contentStyle={{
+              borderRadius: 16,
+              border: "1px solid #e5e7eb",
+              boxShadow: "0 12px 28px -18px rgba(15, 23, 42, 0.28)",
+            }}
+          />
 
         </PieChart>
 

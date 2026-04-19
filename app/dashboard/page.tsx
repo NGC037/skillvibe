@@ -29,6 +29,10 @@ type DashboardPost = {
   };
 };
 
+type AvatarSummaryResponse = {
+  coins?: number;
+};
+
 const statCards = [
   { label: "Skills", accent: "from-purple-500 to-indigo-500" },
   { label: "Participations", accent: "from-teal-500 to-emerald-500" },
@@ -49,6 +53,7 @@ export default function DashboardPage() {
   const [skills, setSkills] = useState<DashboardSkill[]>([]);
   const [participations, setParticipations] = useState<DashboardParticipation[]>([]);
   const [posts, setPosts] = useState<DashboardPost[]>([]);
+  const [coins, setCoins] = useState(0);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -104,6 +109,17 @@ export default function DashboardPage() {
         }
       });
   }, [session]);
+
+  useEffect(() => {
+    fetch("/api/avatar")
+      .then((res) => res.json())
+      .then((data: AvatarSummaryResponse) => {
+        setCoins(data.coins ?? 0);
+      })
+      .catch(() => {
+        setCoins(0);
+      });
+  }, []);
 
   if (status === "loading") {
     return (
@@ -182,6 +198,10 @@ export default function DashboardPage() {
               <div className="rounded-2xl bg-white/14 px-4 py-4 text-white backdrop-blur">
                 <p className="text-xs text-white/70">Confirmed</p>
                 <p className="mt-2 text-2xl font-semibold">{confirmedCount}</p>
+              </div>
+              <div className="rounded-2xl bg-white/14 px-4 py-4 text-white backdrop-blur">
+                <p className="text-xs text-white/70">Coins</p>
+                <p className="mt-2 text-2xl font-semibold">{coins}</p>
               </div>
             </div>
           </div>

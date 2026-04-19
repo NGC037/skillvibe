@@ -103,7 +103,7 @@ export default function InterestedUsersModal({
               <div className="space-y-3">
                 {users.map((user) => (
                   <div
-                    key={user.id}
+                    key={user.id || user.email}
                     className="border rounded-lg p-4 flex justify-between items-center"
                   >
                     <div>
@@ -122,7 +122,7 @@ export default function InterestedUsersModal({
                       <div className="flex flex-wrap gap-2 mt-2">
                         {user.skills.map((skill) => (
                           <span
-                            key={skill.id}
+                            key={`${user.id || user.email}-${skill.id || skill.name}`}
                             className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full"
                           >
                             {skill.name}

@@ -1,72 +1,64 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { ArrowLeft, Loader } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
-import ProjectOverviewCard from "@/components/workspace/ProjectOverviewCard";
-import WorkspaceHealthCard from "@/components/workspace/WorkspaceHealthCard";
-import ProjectSummary from "@/components/workspace/ProjectSummary";
-import ContributionPanel from "@/components/workspace/ContributionPanel";
 import TaskSection from "@/components/workspace/TaskSection";
 import LogsSection from "@/components/workspace/LogsSection";
-import { Loader } from "lucide-react";
+import WorkspaceReportDownload from "@/components/workspace/WorkspaceReportDownload";
+import { JoinRequestsList } from "@/components/teams/JoinRequestsList";
+
+interface TeamMember {
+  userId: string;
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+}
+
+interface Team {
+  id: string;
+  name: string | null;
+  code: string;
+  isLocked: boolean;
+  leaderId: string;
+  event?: {
+    title: string;
+  } | null;
+  leader: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+  members: TeamMember[];
+}
 
 interface Project {
   id: string;
   title: string;
   shortDescription: string;
-  fullDescription?: string;
+  fullDescription?: string | null;
+  architecture?: string | null;
   totalPhases: number;
   currentPhase: number;
-  owner: { id: string; name: string | null };
-  team: { id: string; name: string | null };
-  tasks: Array<{ id: string; status: string }>;
-}
-
-interface TaskStats {
-  total: number;
-  completed: number;
-  completionPercentage: number;
-}
-
-interface WorkspaceTask {
-  id: string;
-  title: string;
-  status: string;
-  description?: string;
-  assignedTo?: { name: string | null } | null;
-  createdAt: string;
-}
-
-interface WorkspaceLog {
-  id: string;
-  content: string;
-  createdAt: string;
-  user?: { name: string | null } | null;
-}
-
-interface WorkspaceContribution {
-  userId: string;
-  userName: string | null;
-  tasksCompleted: number;
-  logsCreated: number;
-  score: number;
-}
-
-interface Team {
-  id: string;
-  name: string;
-  isLocked: boolean;
-  leaderId: string;
-  members: Array<{ userId: string }>;
+  tasks: Array<{
+    id: string;
+    status: "TODO" | "IN_PROGRESS" | "DONE";
+    assignedToId?: string | null;
+  }>;
+  currentViewer?: {
+    id: string;
+    canManageTasks: boolean;
+    canViewAllTasks: boolean;
+    canViewAllLogs: boolean;
+  };
 }
 
 export default function WorkspacePage() {
-  // ============================================
-  // 1. HOOKS - All hooks must be at the top
-  // ============================================
   const { data: session, status } = useSession();
   const params = useParams();
   const router = useRouter();
@@ -77,60 +69,43 @@ export default function WorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [teamLoaded, setTeamLoaded] = useState(false);
-  const [workspaceRefreshKey, setWorkspaceRefreshKey] = useState(0);
-  const [taskStats, setTaskStats] = useState<TaskStats>({
-    total: 0,
-    completed: 0,
-    completionPercentage: 0,
-  });
-  const [workspaceTasks, setWorkspaceTasks] = useState<WorkspaceTask[]>([]);
-  const [workspaceLogs, setWorkspaceLogs] = useState<WorkspaceLog[]>([]);
-  const [workspaceContributions, setWorkspaceContributions] = useState<
-    WorkspaceContribution[]
-  >([]);
-  const [workspaceSummaryLoading, setWorkspaceSummaryLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [viewMode, setViewMode] = useState<"leader" | "member">("leader");
 
-  // ============================================
-  // 2. EFFECTS - All useEffect calls second
-  // ============================================
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
-  }, [status, router]);
+  }, [router, status]);
 
   useEffect(() => {
-    const fetchTeam = async () => {
+    const loadWorkspace = async () => {
       try {
-        setTeamLoaded(false);
-        const res = await fetch(`/api/teams/${teamId}`);
-        if (!res.ok) throw new Error("Failed to fetch team");
-        const data = await res.json();
-        console.log("TEAM FROM API:", data);
-        setTeam(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch team");
-      } finally {
-        setTeamLoaded(true);
-      }
-    };
+        setLoading(true);
+        const [teamRes, projectRes] = await Promise.all([
+          fetch(`/api/teams/${teamId}`),
+          fetch(`/api/project/get-project-by-team?teamId=${teamId}`),
+        ]);
 
-    const fetchProject = async () => {
-      try {
-        const res = await fetch(
-          `/api/project/get-project-by-team?teamId=${teamId}`,
-        );
-        if (!res.ok) throw new Error("Failed to fetch project");
-        const data = await res.json();
-        if (data.data === null) {
-          setProject(null);
-        } else {
-          setProject(data);
+        if (!teamRes.ok) {
+          throw new Error("Failed to fetch team");
         }
+
+        if (!projectRes.ok) {
+          throw new Error("Failed to fetch project");
+        }
+
+        const [teamData, projectData] = await Promise.all([
+          teamRes.json(),
+          projectRes.json(),
+        ]);
+
+        setTeam(teamData);
+        setProject(projectData.data === null ? null : projectData);
+        setError(null);
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Failed to fetch project",
+          err instanceof Error ? err.message : "Failed to load workspace",
         );
       } finally {
         setLoading(false);
@@ -138,82 +113,128 @@ export default function WorkspacePage() {
     };
 
     if (teamId) {
-      fetchTeam();
-      fetchProject();
+      void loadWorkspace();
     }
-  }, [teamId]);
+  }, [teamId, refreshKey]);
 
-  useEffect(() => {
-    const fetchWorkspaceSummary = async () => {
-      if (!project?.id) {
-        setTaskStats({ total: 0, completed: 0, completionPercentage: 0 });
-        setWorkspaceTasks([]);
-        setWorkspaceLogs([]);
-        setWorkspaceContributions([]);
-        return;
-      }
+  const teamMembers = useMemo(() => {
+    if (!team) return [];
+    return [
+      {
+        id: team.leader.id,
+        name: team.leader.name,
+        email: team.leader.email,
+      },
+      ...team.members.map((member) => ({
+        id: member.user.id,
+        name: member.user.name,
+        email: member.user.email,
+      })),
+    ].filter(
+      (member, index, list) =>
+        list.findIndex((entry) => entry.id === member.id) === index,
+    );
+  }, [team]);
 
-      try {
-        setWorkspaceSummaryLoading(true);
-        const [tasksRes, logsRes, contributionsRes] = await Promise.all([
-          fetch(`/api/project/get-tasks?projectId=${project.id}`),
-          fetch(`/api/project/get-logs?projectId=${project.id}`),
-          fetch(`/api/project/get-contribution?projectId=${project.id}`),
-        ]);
+  const tasks = project?.tasks ?? [];
 
-        if (!tasksRes.ok || !logsRes.ok || !contributionsRes.ok) {
-          throw new Error("Failed to fetch workspace summary");
-        }
+  const topContributor = useMemo(() => {
+    if (!project || teamMembers.length === 0) {
+      return null;
+    }
 
-        const [tasks, logs, contributions] = (await Promise.all([
-          tasksRes.json(),
-          logsRes.json(),
-          contributionsRes.json(),
-        ])) as [
-          WorkspaceTask[],
-          WorkspaceLog[],
-          WorkspaceContribution[],
-        ];
+    const rankedContributors = teamMembers.map((member) => {
+      const assignedTasks = tasks.filter(
+        (task) => task.assignedToId === member.id,
+      ).length;
+      const completedTasks = tasks.filter(
+        (task) => task.assignedToId === member.id && task.status === "DONE",
+      ).length;
 
-        const total = tasks.length;
-        const completed = tasks.filter((task) => task.status === "DONE").length;
-        const completionPercentage =
-          total === 0 ? 0 : Math.round((completed / total) * 100);
+      return {
+        id: member.id,
+        name: member.name || member.email,
+        completedTasks,
+        assignedTasks,
+        score: completedTasks * 10 + assignedTasks * 2,
+      };
+    });
 
-        setTaskStats({ total, completed, completionPercentage });
-        setWorkspaceTasks(tasks);
-        setWorkspaceLogs(logs);
-        setWorkspaceContributions(contributions);
-      } catch (taskError) {
-        console.error("WORKSPACE SUMMARY ERROR:", taskError);
-      } finally {
-        setWorkspaceSummaryLoading(false);
-      }
-    };
+    return rankedContributors.sort((a, b) => b.score - a.score)[0] ?? null;
+  }, [project, tasks, teamMembers]);
 
-    void fetchWorkspaceSummary();
-  }, [project?.id, workspaceRefreshKey]);
-
-  // ============================================
-  // 3. GUARD CLAUSES - Conditional returns
-  // ============================================
-  if (status === "loading") {
+  if (status === "loading" || loading) {
     return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader className="w-8 h-8 text-purple-500 animate-spin" />
+      <AppLayout hideSidebar>
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader className="h-8 w-8 animate-spin text-indigo-500" />
         </div>
       </AppLayout>
     );
   }
 
   if (status === "unauthenticated") {
-    return null; // Render nothing while redirecting
+    return null;
   }
 
-  // ============================================
-  // 4. JSX RETURN - Main component JSX
-  // ============================================
+  if (error || !team) {
+    return (
+      <AppLayout hideSidebar>
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg text-rose-500">
+              {error || "Workspace unavailable"}
+            </p>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="mt-4 rounded-xl bg-neutral-900 px-4 py-2 text-white"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const isLeader = session?.user?.id === team.leaderId;
+  const isAdmin = session?.user?.role === "ADMIN";
+  const canManageTasks = Boolean(
+    project?.currentViewer?.canManageTasks || isLeader || isAdmin,
+  );
+  const currentUserId = project?.currentViewer?.id || session?.user?.id || "";
+  const canCreateProject = (isLeader || isAdmin) && team.isLocked && !project;
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter((task) => task.status === "DONE").length;
+  const completionRate =
+    totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+  const activeMembers = teamMembers.length;
+  const myAssignedCount = tasks.filter(
+    (task) => task.assignedToId === currentUserId,
+  ).length;
+  const workspaceMood = getWorkspaceMood(completionRate);
+  const effectiveViewMode =
+    isLeader && project ? viewMode : canManageTasks ? "leader" : "member";
+  const effectiveCanManageTasks =
+    canManageTasks && effectiveViewMode === "leader";
+  const leaderboard = teamMembers
+    .map((member) => {
+      const assignedTasks = tasks.filter(
+        (task) => task.assignedToId === member.id,
+      ).length;
+      const memberCompletedTasks = tasks.filter(
+        (task) => task.assignedToId === member.id && task.status === "DONE",
+      ).length;
+
+      return {
+        id: member.id,
+        name: member.name || member.email,
+        score: memberCompletedTasks * 10 + assignedTasks * 2,
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
 
   const handleCreateProject = async (formData: {
     title: string;
@@ -232,277 +253,374 @@ export default function WorkspacePage() {
         }),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to create project");
+        throw new Error(data.error || "Failed to create project");
       }
 
-      const newProject = await res.json();
-      setProject(newProject);
+      setProject(data);
       setShowCreateForm(false);
+      setRefreshKey((current) => current + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create project");
     }
   };
 
-  if (loading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader className="w-8 h-8 text-purple-500 animate-spin" />
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <p className="text-red-500 text-lg mb-4">{error}</p>
-            <button
-              onClick={() => router.back()}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-            >
-              Go Back
-            </button>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (!teamLoaded || !team) {
-    return (
-      <AppLayout>
-        <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-          <div className="animate-pulse backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-8">
-            <div className="h-10 w-56 rounded-full bg-white/10" />
-            <div className="mt-4 h-4 w-80 rounded-full bg-white/10" />
-          </div>
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="animate-pulse backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-8 space-y-4">
-              <div className="h-6 w-40 rounded-full bg-white/10" />
-              <div className="h-20 rounded-2xl bg-white/10" />
-              <div className="h-3 w-full rounded-full bg-white/10" />
-            </div>
-            <div className="animate-pulse backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-8 space-y-4">
-              <div className="h-6 w-32 rounded-full bg-white/10" />
-              <div className="h-16 rounded-2xl bg-white/10" />
-              <div className="h-16 rounded-2xl bg-white/10" />
-            </div>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  const isTeamLeader = session?.user?.id === team?.leaderId;
-  const isAdmin = session?.user?.role === "ADMIN";
-  const canCreateProject = (isTeamLeader || isAdmin) && team.isLocked && !project;
-  const canViewWorkspacePanels = Boolean(project);
-
-  const handleWorkspaceDataChange = () => {
-    setWorkspaceRefreshKey((current) => current + 1);
-  };
-
-  const handleExportReport = () => {
-    const data = {
-      team: team.name,
-      members: team.members,
-      tasks: workspaceTasks,
-      logs: workspaceLogs,
-      contribution: workspaceContributions,
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "workspace-report.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
-    <AppLayout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-900 to-black">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
+    <AppLayout hideSidebar>
+      <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-purple-700 via-indigo-600 to-teal-500">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_34%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_22%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.1),transparent_18%)]" />
+
+        <div className="relative mx-auto max-w-7xl px-4 py-8">
+          <button
+            type="button"
+            onClick={() =>
+              router.push(
+                session?.user?.role === "ADMIN" ? "/admin" : "/dashboard",
+              )
+            }
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-4 py-2 text-sm font-medium text-white backdrop-blur-xl transition-all duration-300 hover:bg-white/18 hover:shadow-lg"
           >
-            <div>
-              <h1 className="text-4xl font-bold text-white mb-2">
-                {team?.name} Workspace
-              </h1>
-              <p className="text-gray-300">Team collaboration workspace</p>
-            </div>
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </button>
 
-            <button
-              onClick={handleExportReport}
-              className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-purple-600 to-teal-400 px-4 py-2 text-white font-semibold hover:shadow-lg hover:shadow-purple-500/40 transition-all"
-            >
-              Export Report
-            </button>
-          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="overflow-hidden rounded-[2rem] border border-white/20 bg-white/10 p-8 text-white shadow-2xl backdrop-blur-xl"
+          >
+            <div className="flex flex-col gap-x-6 gap-y-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-4">
+                <p className="text-xs uppercase tracking-[0.24em] text-white/70">
+                  SkillVibe workspace
+                </p>
+                <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+                  {team.name || team.code}
+                </h1>
+                <p className="max-w-3xl text-base font-medium text-white/90">
+                  {team.event?.title || "Execution workspace"}
+                </p>
+                <p className="text-sm text-white/80">
+                  {effectiveCanManageTasks
+                    ? "Leader control mode"
+                    : "Member focus mode"}{" "}
+                  | Team code {team.code}
+                </p>
+              </div>
 
-          {/* No Project State */}
-          {!project && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8"
-            >
-              {team.isLocked === false ? (
-                <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-8 text-center">
-                  <p className="text-gray-300">
-                    Team is not locked yet. Lock the team to create a workspace.
+              <div className="flex flex-col gap-3 sm:items-end">
+                {isLeader && project ? (
+                  <div className="inline-flex rounded-full border border-white/20 bg-white/10 p-1 backdrop-blur-xl shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("leader")}
+                      className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${
+                        effectiveViewMode === "leader"
+                          ? "bg-white text-slate-900"
+                          : "text-white/80 hover:bg-white/10"
+                      }`}
+                    >
+                      Leader Mode
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("member")}
+                      className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${
+                        effectiveViewMode === "member"
+                          ? "bg-white text-slate-900"
+                          : "text-white/80 hover:bg-white/10"
+                      }`}
+                    >
+                      Member Mode
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="rounded-[1.5rem] border border-white/20 bg-white/10 px-5 py-4 backdrop-blur-xl shadow-lg">
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/60">
+                    Access
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {effectiveCanManageTasks ? "Leader" : "Member"}
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {project ? (
+              <div className="mt-8 grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+                <div className="rounded-[1.75rem] border border-white/20 bg-white/10 p-6 shadow-xl backdrop-blur-xl">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.22em] text-white/70">
+                        Workspace Progress
+                      </p>
+                      <h2 className="mt-2 text-3xl font-bold">
+                        {completionRate}% completion
+                      </h2>
+                    </div>
+
+                    <div
+                      className={`inline-flex rounded-full border px-4 py-2 text-sm font-medium backdrop-blur ${
+                        completionRate < 30
+                          ? "border-yellow-300/30 bg-yellow-500/20 text-yellow-100"
+                          : completionRate < 70
+                            ? "border-blue-300/30 bg-blue-500/20 text-blue-100"
+                            : "border-emerald-300/30 bg-emerald-500/20 text-emerald-100"
+                      }`}
+                    >
+                      {workspaceMood}
+                    </div>
+                  </div>
+
+                  <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-white/15">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-purple-300 via-blue-300 to-teal-200 shadow-[0_0_20px_rgba(255,255,255,0.35)] transition-all duration-500"
+                      style={{ width: `${completionRate}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-[1.75rem] border border-white/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.14),rgba(255,255,255,0.08))] p-6 shadow-xl backdrop-blur-xl">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-white/15 text-2xl shadow-lg">
+                      🥇
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs uppercase tracking-[0.22em] text-cyan-100/80">
+                        Top Contributor
+                      </p>
+                      <h2 className="mt-2 text-xl font-semibold text-white">
+                        {topContributor?.name || "No activity yet"}
+                      </h2>
+                      <p className="mt-2 text-sm text-white/72">
+                        {topContributor
+                          ? `${topContributor.completedTasks} completed tasks across ${topContributor.assignedTasks} assignments.`
+                          : "Task activity will surface your strongest contributor here."}
+                      </p>
+                      <span className="mt-4 inline-flex rounded-full border border-white/20 bg-white/12 px-3 py-1 text-sm font-semibold text-white">
+                        {topContributor?.score ?? 0} pts
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {project ? (
+              <div className="mt-6 border-t border-white/10 pt-6">
+                <WorkspaceReportDownload teamId={teamId} />
+              </div>
+            ) : null}
+          </motion.div>
+
+          {!project ? (
+            <div className="mt-8 rounded-[2rem] border border-white/20 bg-white/10 p-8 text-center text-white shadow-xl backdrop-blur-xl">
+              {team.isLocked === false ? (
+                <p className="text-slate-300">
+                  Team is not locked yet. Lock the team before starting the
+                  workspace.
+                </p>
               ) : canCreateProject ? (
-                <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-8 text-center">
-                  <p className="text-gray-300 mb-4">
-                    No workspace project yet. Create one to get started!
+                <>
+                  <p className="text-slate-300">
+                    No workspace project exists yet. Start the execution board
+                    when the team is ready.
                   </p>
                   <button
+                    type="button"
                     onClick={() => setShowCreateForm(true)}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all"
+                    className="mt-5 rounded-2xl bg-gradient-to-r from-white to-white/90 px-5 py-3 text-sm font-semibold text-slate-900 shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
                   >
                     Start Workspace
                   </button>
-                </div>
+                </>
               ) : (
-                <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-8 text-center">
-                  <p className="text-gray-300">
-                    Workspace is ready to start once a team leader or admin creates the project.
-                  </p>
-                </div>
+                <p className="text-slate-300">
+                  Waiting for the team leader to start the workspace.
+                </p>
               )}
-            </motion.div>
-          )}
-
-          {/* Project Content */}
-          {canViewWorkspacePanels && project && (
-            <div className="space-y-6">
-              <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <ProjectOverviewCard project={project} taskStats={taskStats} />
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.03 }}
-                >
-                  <WorkspaceHealthCard
-                    progressPercentage={taskStats.completionPercentage}
-                    totalMembers={team.members.length + 1}
-                    contributions={workspaceContributions}
-                    logs={workspaceLogs}
-                    loading={workspaceSummaryLoading}
-                  />
-                </motion.div>
+            </div>
+          ) : (
+            <div className="mt-8 space-y-6">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <InfoCard
+                  icon="📋"
+                  label="Total Tasks"
+                  value={`${totalTasks}`}
+                />
+                <InfoCard
+                  icon="✅"
+                  label="Completed Tasks"
+                  value={`${completedTasks}`}
+                />
+                <InfoCard
+                  icon="👥"
+                  label="Active Members"
+                  value={`${activeMembers}`}
+                />
+                <InfoCard
+                  icon="🚀"
+                  label="Phase"
+                  value={`${project.currentPhase}/${project.totalPhases}`}
+                />
               </div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
-              >
-                <ProjectSummary
-                  tasks={workspaceTasks}
-                  logs={workspaceLogs}
-                  contributions={workspaceContributions}
-                  loading={workspaceSummaryLoading}
-                />
-              </motion.div>
+              <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+                <div className="rounded-[1.9rem] border border-white/20 bg-white/10 p-6 text-white shadow-xl backdrop-blur-xl">
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.22em] text-white/55">
+                        Workspace Brief
+                      </p>
+                      <h2 className="mt-2 text-2xl font-semibold">
+                        {project.title}
+                      </h2>
+                      <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-200">
+                        {project.fullDescription || project.shortDescription}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-cyan-300/25 bg-cyan-400/12 px-4 py-3 text-sm text-cyan-50">
+                      {effectiveCanManageTasks
+                        ? "You can create, assign, reassign, and delete tasks for this workspace."
+                        : "You can only view your assigned tasks and update their status."}
+                    </div>
+                  </div>
+                </div>
 
-              {/* Contribution Panel */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <ContributionPanel
-                  projectId={project.id}
-                  refreshKey={workspaceRefreshKey}
-                  completionPercentage={taskStats.completionPercentage}
-                />
-              </motion.div>
+                <div className="rounded-[1.9rem] border border-white/20 bg-white/10 p-6 text-white shadow-xl backdrop-blur-xl">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.22em] text-white/55">
+                      Contributor Board
+                    </p>
+                    <h2 className="mt-2 text-2xl font-semibold">
+                      Mini Leaderboard
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-200">
+                      Quick team momentum snapshot based on completed and
+                      assigned work.
+                    </p>
+                  </div>
 
-              {/* Task Section */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <TaskSection
-                  projectId={project.id}
-                  onTaskUpdated={handleWorkspaceDataChange}
-                  isTeamMember={
-                    team?.members.some((m) => m.userId === session?.user?.id) ||
-                    team?.leaderId === session?.user?.id ||
-                    isAdmin
-                  }
-                />
-              </motion.div>
+                  <div className="mt-5 space-y-3">
+                    {leaderboard.map((member, index) => (
+                      <div
+                        key={member.id}
+                        className="flex items-center justify-between rounded-2xl border border-white/15 bg-white/10 px-4 py-3 transition-all duration-300 hover:scale-[1.01] hover:bg-white/14"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg font-semibold">
+                            {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
+                          </span>
+                          <span className="text-sm font-medium text-white">
+                            {member.name}
+                          </span>
+                        </div>
+                        <span className="rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-white">
+                          {member.score} pts
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-              {/* Logs Section */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <LogsSection
-                  projectId={project.id}
-                  onLogCreated={handleWorkspaceDataChange}
-                  isTeamMember={
-                    team?.members.some((m) => m.userId === session?.user?.id) ||
-                    team?.leaderId === session?.user?.id ||
-                    isAdmin
-                  }
-                />
-              </motion.div>
+              <TaskSection
+                projectId={project.id}
+                currentUserId={currentUserId}
+                canManageTasks={effectiveCanManageTasks}
+                teamMembers={teamMembers}
+                viewMode={effectiveViewMode}
+                onTaskUpdated={() => setRefreshKey((current) => current + 1)}
+              />
+
+              {isLeader && (
+                <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/5 p-8 text-white backdrop-blur">
+                  <JoinRequestsList
+                    teamId={teamId}
+                    isLeader={isLeader}
+                    onRequestProcessed={() =>
+                      setRefreshKey((current) => current + 1)
+                    }
+                  />
+                </div>
+              )}
+
+              <LogsSection
+                projectId={project.id}
+                canManageTasks={effectiveCanManageTasks}
+                viewMode={effectiveViewMode}
+                onLogCreated={() => setRefreshKey((current) => current + 1)}
+              />
             </div>
           )}
-
-          {/* Create Project Modal */}
-          {showCreateForm && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-              onClick={() => setShowCreateForm(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="backdrop-blur-md bg-slate-800/90 border border-white/10 rounded-2xl p-8 max-w-md w-full mx-4"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <h2 className="text-2xl font-bold text-white mb-4">
-                  Start Workspace
-                </h2>
-                <CreateProjectForm
-                  onSubmit={handleCreateProject}
-                  onCancel={() => setShowCreateForm(false)}
-                />
-              </motion.div>
-            </motion.div>
-          )}
         </div>
+
+        {showCreateForm ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+            onClick={() => setShowCreateForm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="w-full max-w-xl rounded-3xl border border-white/10 bg-slate-950/95 p-8 text-white"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h2 className="text-2xl font-bold">Start Workspace</h2>
+              <p className="mt-2 text-sm text-slate-300">
+                Set up the project board, then assign work to your team.
+              </p>
+              <CreateProjectForm
+                onSubmit={handleCreateProject}
+                onCancel={() => setShowCreateForm(false)}
+              />
+            </motion.div>
+          </motion.div>
+        ) : null}
       </div>
     </AppLayout>
   );
+}
+
+function InfoCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-[1.7rem] border border-white/20 bg-white/10 p-6 text-white shadow-xl backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl">
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/20 bg-white/12 text-xl shadow-sm">
+          {icon}
+        </span>
+        <p className="text-xs uppercase tracking-[0.2em] text-slate-200">
+          {label}
+        </p>
+      </div>
+      <p className="mt-4 text-2xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function getWorkspaceMood(completionRate: number) {
+  if (completionRate < 30) {
+    return "⚠️ Getting Started";
+  }
+
+  if (completionRate < 70) {
+    return "🚀 In Progress";
+  }
+
+  return "🔥 Almost There";
 }
 
 interface CreateProjectFormProps {
@@ -537,96 +655,74 @@ function CreateProjectForm({ onSubmit, onCancel }: CreateProjectFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="text-sm text-gray-300 block mb-2">
-          Project Title
-        </label>
-        <input
-          type="text"
-          required
-          value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
-          placeholder="Enter project title"
-        />
-      </div>
-
-      <div>
-        <label className="text-sm text-gray-300 block mb-2">
-          Short Description
-        </label>
-        <input
-          type="text"
-          required
-          value={formData.shortDescription}
-          onChange={(e) =>
-            setFormData({ ...formData, shortDescription: e.target.value })
-          }
-          className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
-          placeholder="Brief description"
-        />
-      </div>
-
-      <div>
-        <label className="text-sm text-gray-300 block mb-2">
-          Full Description
-        </label>
-        <textarea
-          value={formData.fullDescription}
-          onChange={(e) =>
-            setFormData({ ...formData, fullDescription: e.target.value })
-          }
-          className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 resize-none h-20"
-          placeholder="Detailed description"
-        />
-      </div>
-
-      <div>
-        <label className="text-sm text-gray-300 block mb-2">Architecture</label>
-        <input
-          type="text"
-          value={formData.architecture}
-          onChange={(e) =>
-            setFormData({ ...formData, architecture: e.target.value })
-          }
-          className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
-          placeholder="e.g., Microservices, Monolithic"
-        />
-      </div>
-
-      <div>
-        <label className="text-sm text-gray-300 block mb-2">Total Phases</label>
-        <input
-          type="number"
-          required
-          min={1}
-          value={formData.totalPhases}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              totalPhases: parseInt(e.target.value) || 1,
-            })
-          }
-          className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
-        />
-      </div>
-
-      <div className="flex gap-3 pt-4">
+    <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+      <input
+        type="text"
+        required
+        value={formData.title}
+        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+        className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-slate-300/70"
+        placeholder="Project title"
+        aria-label="Project title"
+      />
+      <input
+        type="text"
+        required
+        value={formData.shortDescription}
+        onChange={(e) =>
+          setFormData({ ...formData, shortDescription: e.target.value })
+        }
+        className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-slate-300/70"
+        placeholder="Short description"
+        aria-label="Short description"
+      />
+      <textarea
+        value={formData.fullDescription}
+        onChange={(e) =>
+          setFormData({ ...formData, fullDescription: e.target.value })
+        }
+        className="min-h-28 w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-slate-300/70"
+        placeholder="Full description"
+        aria-label="Full description"
+      />
+      <input
+        type="text"
+        value={formData.architecture}
+        onChange={(e) =>
+          setFormData({ ...formData, architecture: e.target.value })
+        }
+        className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-slate-300/70"
+        placeholder="Architecture"
+        aria-label="Architecture"
+      />
+      <input
+        type="number"
+        min={1}
+        value={formData.totalPhases}
+        onChange={(e) =>
+          setFormData({
+            ...formData,
+            totalPhases: Number.parseInt(e.target.value, 10) || 1,
+          })
+        }
+        className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-slate-300/70"
+        placeholder="Total phases"
+        aria-label="Total phases"
+      />
+      <div className="flex gap-3">
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold"
-          disabled={loading}
+          className="flex-1 rounded-2xl border border-white/10 px-4 py-3 text-sm font-semibold text-white transition-all duration-300 hover:bg-white/10"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-purple-500/50 disabled:opacity-50"
+          className="flex-1 rounded-2xl bg-gradient-to-r from-white to-white/90 px-4 py-3 text-sm font-semibold text-slate-900 shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl disabled:opacity-50"
         >
-          {loading ? "Creating..." : "Create"}
+          {loading ? "Creating..." : "Create Workspace"}
         </button>
       </div>
     </form>
