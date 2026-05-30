@@ -1,122 +1,145 @@
-# 🚀 SkillVibe
+# SkillVibe
 
-SkillVibe is a **governance-driven team formation platform for academic events**.
-It ensures that teams meet event requirements before they are allowed to register externally.
+### Governance-First Collaboration Platform for Students, Teams & Hackathons
 
-Instead of chaotic hackathon registrations, SkillVibe introduces **structured participation, skill validation, and team readiness governance.**
+SkillVibe is a full-stack platform that transforms how students form teams, execute projects, and track contributions during hackathons, competitions, and academic projects.
 
----
-
-# 🧠 Core Idea
-
-SkillVibe acts as a **governance layer before event registration**.
-
-Students:
-
-* Add their skills
-* Discover events
-* Form teams
-* Validate readiness
-
-Only when the team is **ready and locked**, the official event registration link becomes visible.
+Unlike traditional platforms that stop at registration, SkillVibe introduces a governance layer that ensures accountability, transparency, and structured collaboration throughout the project lifecycle.
 
 ---
 
-# 🏗 Tech Stack
+## 🚀 Why SkillVibe?
+
+Most student teams face the same challenges:
+
+* Teams are formed randomly
+* Skills are not considered during team creation
+* Contributions go untracked
+* Mentors lack visibility
+* Project execution becomes chaotic
+
+SkillVibe solves these problems through skill-driven team formation, governed participation workflows, workspace management, contribution tracking, and mentor/admin oversight.
+
+---
+
+## ✨ Key Features
+
+### 🎯 Skill-Based Team Formation
+
+* Student skill profiling
+* Team match scoring
+* Skill-gap analysis
+* Event-specific skill requirements
+
+### 👥 Governed Team Management
+
+* Team creation with unique codes
+* Leader approval system
+* Team readiness validation
+* Team locking before project execution
+
+### 🚀 Project Execution Workspace
+
+* Team-specific workspaces
+* Task assignment and tracking
+* Progress monitoring
+* Activity logs and work journals
+
+### 📊 Contribution Engine
+
+* Individual contribution scoring
+* Real-time leaderboards
+* Activity tracking
+* Anti-abuse contribution logic
+
+### 👨‍🏫 Mentor Dashboard
+
+* Mentee tracking
+* Skill endorsements
+* Performance analytics
+* Workspace visibility
+
+### 🏢 Admin Command Center
+
+* Platform-wide analytics
+* Event management
+* Team monitoring
+* Participation insights
+
+### 📄 Report Generation
+
+* PDF Reports
+* DOCX Reports
+* Team performance summaries
+
+---
+
+## 🛠 Tech Stack
 
 ### Frontend
 
-* Next.js 16 (App Router)
+* Next.js 16
+* React 19
 * TypeScript
-* Tailwind CSS v4
+* Tailwind CSS 4
 * Framer Motion
+* Zustand
+* Recharts
 
 ### Backend
 
 * Next.js API Routes
 * Prisma ORM
-* Neon PostgreSQL
+* PostgreSQL (Neon)
 
 ### Authentication
 
-* NextAuth v4
-* JWT Session Strategy
+* NextAuth.js
+* Prisma Adapter
+* bcryptjs
+
+### Additional Tools
+
+* jsPDF
+* docx
 
 ---
 
-# 👤 Roles
+## 🎯 Project Workflow
 
-### 🎓 Student
-
-* Manage skills
-* Explore events
-* Create / join teams
-* Participate in events
-
-### 👨‍🏫 Mentor
-
-* Monitor team readiness
-* View event analytics
-* Observe team composition
-
-### 🛠 Admin
-
-* Create events
-* Manage governance
-* Unlock teams
-* Monitor participation metrics
-
----
-
-# 🧩 Core Features
-
-✔ Skill Management
-✔ Event Discovery
-✔ Skill Match Percentage
-✔ Team Creation
-✔ Join via Team Code
-✔ Team Governance System
-✔ Leader Lock Mechanism
-✔ Admin Unlock Override
-✔ Role-Based Dashboards
+Student Registration
+↓
+Skill Onboarding
+↓
+Event Participation
+↓
+Team Formation
+↓
+Team Validation
+↓
+Workspace Access
+↓
+Task Execution
+↓
+Contribution Tracking
+↓
+Mentor Review
+↓
+Admin Analytics
 
 ---
 
-# 🧠 Governance System
+## 🌟 Vision
 
-SkillVibe enforces:
-
-* Skill validation
-* Team readiness
-* Participation confirmation
-* Team locking
-* Admin oversight
-* Mentor monitoring
-
-This ensures **only valid teams register for events.**
+To become the operating system for student collaboration by combining team formation, project execution, contribution tracking, and governance into a single platform.
 
 ---
 
-# 📊 Current Status
-
-SkillVibe is currently a **Governance-Ready MVP (~75% complete)**.
-
-Planned features:
-
-* Official event registration reveal system
-* Skill collaboration posts
-* Mentor endorsements
-* Audit logs
-
----
-
-# 🚀 Future Vision
-
-SkillVibe aims to become a **governance-driven collaboration platform for academic events and hackathons**, enabling structured participation and skill-based team discovery.
-
----
-
-# 👩‍💻 Author
+## 👩‍💻 Developer
 
 Neha Chintala
-Engineering Student | Builder | Hackathon Participant
+
+Computer Engineering Student | Full Stack Developer
+
+LinkedIn: [Your LinkedIn URL]
+GitHub: [Your GitHub URL]
