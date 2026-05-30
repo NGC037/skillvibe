@@ -118,6 +118,7 @@ async function fetchTeamsForMentorMentees(studentIds: string[]) {
             select: {
               id: true,
               userId: true,
+              content: true,
               createdAt: true,
             },
             orderBy: {
