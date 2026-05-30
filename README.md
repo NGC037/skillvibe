@@ -141,5 +141,5 @@ Neha Chintala
 
 Computer Engineering Student | Full Stack Developer
 
-LinkedIn: [Your LinkedIn URL]
-GitHub: [Your GitHub URL]
+LinkedIn: https://www.linkedin.com/in/neha-chintala-576949373/
+GitHub: https://github.com/NGC037/skillvibe/
