@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+const validLevels = new Set(["Beginner", "Intermediate", "Advanced"]);
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -52,6 +54,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!validLevels.has(level)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid skill level" },
+        { status: 400 },
+      );
+    }
+
     const skill = await prisma.skill.upsert({
       where: { name: skillName },
       update: {},
@@ -80,6 +89,45 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { success: false, error: "Server error" },
       { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
+    const body = await request.json();
+    const skillId = typeof body.skillId === "string" ? body.skillId : "";
+
+    if (!skillId) {
+      return NextResponse.json(
+        { success: false, error: "Skill ID is required" },
+        { status: 400 },
+      );
+    }
+
+    await prisma.userSkill.deleteMany({
+      where: {
+        userId: session.user.id,
+        skillId,
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE SKILL ERROR:", error);
+
+    return NextResponse.json(
+      { success: false, error: "Server error" },
+      { status: 500 },
     );
   }
 }

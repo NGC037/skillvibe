@@ -107,11 +107,23 @@ async function fetchTeamsForMentorMentees(studentIds: string[]) {
       project: {
         include: {
           owner: true,
-          tasks: true,
-          progressLogs: {
-            include: {
-              user: true,
+          tasks: {
+            select: {
+              id: true,
+              status: true,
+              assignedToId: true,
             },
+          },
+          progressLogs: {
+            select: {
+              id: true,
+              userId: true,
+              createdAt: true,
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 10, // Limit to last 10 progress logs
           },
         },
       },
@@ -119,6 +131,7 @@ async function fetchTeamsForMentorMentees(studentIds: string[]) {
     orderBy: {
       createdAt: "asc",
     },
+    take: 50, // Limit to prevent fetching too much data
   });
 }
 

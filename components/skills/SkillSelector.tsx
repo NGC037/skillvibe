@@ -5,9 +5,34 @@ import { X } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 type SkillLevel = "Beginner" | "Intermediate" | "Advanced";
+type UserSkillResponse = {
+  skill: {
+    id: string;
+    name: string;
+  };
+  level: SkillLevel;
+  endorsed?: boolean;
+};
 
-export default function SkillSelector({ isEditing }: { isEditing: boolean }) {
-  const { data: session, status } = useSession();
+function formatUserSkills(userSkills: UserSkillResponse[]) {
+  return userSkills.map((userSkill) => ({
+    id: userSkill.skill.id,
+    name: userSkill.skill.name,
+    level: userSkill.level,
+    endorsed: userSkill.endorsed,
+  }));
+}
+
+export default function SkillSelector({
+  isEditing,
+  onSkillsChange,
+}: {
+  isEditing: boolean;
+  onSkillsChange?: (
+    skills: { id: string; name: string; level: SkillLevel; endorsed?: boolean }[],
+  ) => void;
+}) {
+  const { status } = useSession();
 
   const [skills, setSkills] = useState<
     { id: string; name: string; level: SkillLevel; endorsed?: boolean }[]
@@ -23,19 +48,15 @@ export default function SkillSelector({ isEditing }: { isEditing: boolean }) {
       .then((res) => res.json())
       .then((data) => {
         if (data?.success) {
-          const formatted = data.userSkills.map((us: any) => ({
-            id: us.skill.id,
-            name: us.skill.name,
-            level: us.level,
-            endorsed: us.endorsed,
-          }));
+          const formatted = formatUserSkills(data.userSkills);
           setSkills(formatted);
+          onSkillsChange?.(formatted);
         }
       })
       .catch((error) => {
         console.error("Skill fetch error:", error);
       });
-  }, [status]);
+  }, [onSkillsChange, status]);
 
   const addSkill = async () => {
     if (!input.trim()) return;
@@ -60,12 +81,9 @@ export default function SkillSelector({ isEditing }: { isEditing: boolean }) {
       const updated = await fetch(`/api/users/skills`).then((r) => r.json());
 
       if (updated.success) {
-        const formatted = updated.userSkills.map((us: any) => ({
-          id: us.skill.id,
-          name: us.skill.name,
-          level: us.level,
-        }));
+        const formatted = formatUserSkills(updated.userSkills);
         setSkills(formatted);
+        onSkillsChange?.(formatted);
       }
 
       setInput("");
@@ -84,12 +102,9 @@ export default function SkillSelector({ isEditing }: { isEditing: boolean }) {
     const updated = await fetch(`/api/users/skills`).then((r) => r.json());
 
     if (updated.success) {
-      const formatted = updated.userSkills.map((us: any) => ({
-        id: us.skill.id,
-        name: us.skill.name,
-        level: us.level,
-      }));
+      const formatted = formatUserSkills(updated.userSkills);
       setSkills(formatted);
+      onSkillsChange?.(formatted);
     }
   };
 

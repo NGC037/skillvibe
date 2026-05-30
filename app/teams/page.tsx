@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import TeamsWorkspaceGrid from "@/components/teams/TeamsWorkspaceGrid";
+import AppLayout from "@/components/layout/AppLayout";
 
 export default async function TeamsPage() {
 
@@ -29,11 +30,12 @@ export default async function TeamsPage() {
 
   return (
 
-    <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+    <AppLayout>
+    <div className="mx-auto max-w-6xl space-y-8">
 
       {/* HEADER */}
 
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl p-8 shadow-lg">
+      <div className="overflow-hidden rounded-[1.75rem] border border-white/20 bg-gradient-to-br from-purple-700 via-indigo-600 to-teal-500 p-8 text-white shadow-[0_24px_70px_-30px_rgba(79,70,229,0.55)]">
 
         <h1 className="text-3xl font-bold">
           Your Teams
@@ -51,6 +53,7 @@ export default async function TeamsPage() {
       <TeamsWorkspaceGrid teams={teams} />
 
     </div>
+    </AppLayout>
 
   );
 

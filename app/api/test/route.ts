@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/requireRole";
+import { Role } from "@prisma/client";
 
 
 export async function GET() {
+  const { error } = await requireRole([Role.ADMIN]);
+  if (error) return error;
+
   try {
     const skills = await prisma.skill.findMany({
       orderBy: { name: "asc" },
@@ -16,6 +21,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const { error } = await requireRole([Role.ADMIN]);
+  if (error) return error;
+
   try {
     const body = await request.json();
     const { name } = body;

@@ -613,14 +613,14 @@ function InfoCard({
 
 function getWorkspaceMood(completionRate: number) {
   if (completionRate < 30) {
-    return "⚠️ Getting Started";
+    return "Getting Started";
   }
 
   if (completionRate < 70) {
-    return "🚀 In Progress";
+    return "In Progress";
   }
 
-  return "🔥 Almost There";
+  return "Almost Done";
 }
 
 interface CreateProjectFormProps {

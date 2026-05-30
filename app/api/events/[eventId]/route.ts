@@ -18,6 +18,7 @@ export async function GET(
         maxTeamSize: true,
         maxParticipants: true,
         externalLink: true,
+        posterUrl: true,
         isRegistrationOpen: true,
         registrationStartDate: true,
         registrationEndDate: true,

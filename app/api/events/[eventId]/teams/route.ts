@@ -8,6 +8,22 @@ function generateCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+async function generateUniqueCode() {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = generateCode();
+    const existing = await prisma.team.findUnique({
+      where: { code },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return code;
+    }
+  }
+
+  throw new Error("Unable to generate team code");
+}
+
 export async function GET(
   _request: Request,
   context: { params: Promise<{ eventId: string }> },
@@ -65,17 +81,59 @@ export async function POST(
     }
 
     const { name } = await request.json();
+    const normalizedName = typeof name === "string" ? name.trim() : "";
 
-    if (!name) {
+    if (!normalizedName) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
     const { eventId } = await context.params;
-    const code = generateCode();
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true, minTeamSize: true, maxTeamSize: true },
+    });
+
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    const participation = await prisma.participation.findUnique({
+      where: {
+        userId_eventId: {
+          userId: session.user.id,
+          eventId,
+        },
+      },
+      select: { status: true },
+    });
+
+    if (participation?.status !== ParticipationStatus.CONFIRMED) {
+      return NextResponse.json(
+        { error: "Confirm participation before creating a team." },
+        { status: 403 },
+      );
+    }
+
+    const existingTeam = await prisma.teamMember.findFirst({
+      where: {
+        userId: session.user.id,
+        team: { eventId },
+      },
+      select: { id: true },
+    });
+
+    if (existingTeam) {
+      return NextResponse.json(
+        { error: "You are already part of a team for this event." },
+        { status: 409 },
+      );
+    }
+
+    const code = await generateUniqueCode();
 
     const team = await prisma.team.create({
       data: {
-        name,
+        name: normalizedName,
         code,
         event: {
           connect: { id: eventId },

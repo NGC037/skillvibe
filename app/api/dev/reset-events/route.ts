@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/requireRole";
+import { Role } from "@prisma/client";
 
 export async function GET() {
+  const { error } = await requireRole([Role.ADMIN]);
+  if (error) return error;
+
   try {
     // Delete in correct order (respecting relations)
 

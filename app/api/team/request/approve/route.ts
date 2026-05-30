@@ -59,11 +59,19 @@ export async function POST(request: Request) {
     }
 
     const membership = await prisma.teamMember.findFirst({
-      where: { userId: joinRequest.userId },
+      where: {
+        userId: joinRequest.userId,
+        team: {
+          eventId: joinRequest.team.eventId,
+        },
+      },
     });
 
     if (membership) {
-      return NextResponse.json({ error: "User is already part of a team." }, { status: 409 });
+      return NextResponse.json(
+        { error: "User is already part of a team for this event." },
+        { status: 409 },
+      );
     }
 
     await prisma.$transaction(async (tx) => {

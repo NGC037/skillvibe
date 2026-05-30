@@ -39,7 +39,7 @@ export default function AppLayout({
 
   return (
 
-    <div className="flex min-h-screen bg-transparent">
+    <div className="flex min-h-screen flex-col bg-transparent md:flex-row">
 
       {/* SIDEBAR */}
 
@@ -47,12 +47,12 @@ export default function AppLayout({
       <motion.aside
         initial={{ x: -20, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        className="w-72 border-r border-white/70 bg-white/75 backdrop-blur-xl flex flex-col shadow-[18px_0_40px_-32px_rgba(79,70,229,0.35)]"
+        className="w-full border-b border-white/70 bg-white/75 backdrop-blur-xl shadow-[18px_0_40px_-32px_rgba(79,70,229,0.35)] md:w-72 md:flex-shrink-0 md:border-b-0 md:border-r"
       >
 
         {/* LOGO */}
 
-        <div className="px-7 py-7 border-b border-white/70">
+        <div className="px-5 py-5 border-b border-white/70 md:px-7 md:py-7">
 
           <span className="text-xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-500 bg-clip-text text-transparent">
             SkillVibe
@@ -66,7 +66,7 @@ export default function AppLayout({
 
         {/* NAVIGATION */}
 
-        <nav className="flex-1 px-4 py-6 space-y-2">
+        <nav className="flex gap-2 overflow-x-auto px-4 py-4 md:block md:flex-1 md:space-y-2 md:overflow-visible md:py-6">
 
           {/* STUDENT */}
 
@@ -105,13 +105,13 @@ export default function AppLayout({
 
       {/* MAIN AREA */}
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
 
         {/* TOP BAR */}
 
         <header className="border-b border-white/70 bg-white/60 backdrop-blur-xl">
 
-          <div className="max-w-7xl mx-auto px-8 py-5 flex items-center justify-between gap-4">
+          <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
 
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-neutral-400">
@@ -124,7 +124,7 @@ export default function AppLayout({
 
             {/* USER */}
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <NotificationBell />
 
               <button
@@ -158,7 +158,7 @@ export default function AppLayout({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.24, ease: "easeOut" }}
-            className="flex-1 px-8 py-10"
+            className="flex-1 px-4 py-8 sm:px-8 sm:py-10"
           >
             {children}
           </motion.main>

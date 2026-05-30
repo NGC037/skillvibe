@@ -13,6 +13,8 @@ import { useSession } from "next-auth/react";
 type Skill = {
   id: string;
   name: string;
+  level?: string;
+  endorsed?: boolean;
 };
 
 type Avatar = {
@@ -50,6 +52,16 @@ export default function ProfilePage() {
   });
   const router = useRouter();
   const { data: session, status } = useSession();
+  const [isOnboarding, setIsOnboarding] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  useEffect(() => {
+    setIsOnboarding(new URLSearchParams(window.location.search).get("onboarding") === "1");
+  }, []);
 
   useEffect(() => {
     if (status !== "authenticated" || !session?.user?.id) return;
@@ -67,6 +79,9 @@ export default function ProfilePage() {
         if (profileRes.ok) {
           setBio(profileData.bio || "");
           setSkills(profileData.skills || []);
+          if (isOnboarding && (profileData.skills || []).length === 0) {
+            setIsEditing(true);
+          }
         }
 
         if (avatarRes.ok) {
@@ -96,7 +111,36 @@ export default function ProfilePage() {
     };
 
     fetchProfile();
-  }, [status, session]);
+  }, [isOnboarding, status, session]);
+
+  const handlePasswordChange = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setPasswordError(null);
+    setPasswordMessage(null);
+
+    try {
+      setPasswordLoading(true);
+      const res = await fetch("/api/profile/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setPasswordError(data?.error ?? "Failed to change password");
+        return;
+      }
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setPasswordMessage("Password updated successfully.");
+    } catch {
+      setPasswordError("Failed to change password");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     await fetch("/api/profile", {
@@ -434,8 +478,57 @@ export default function ProfilePage() {
               Your skills help match you with suitable events and teams.
             </p>
 
-            <SkillSelector isEditing={isEditing} />
+            <SkillSelector isEditing={isEditing} onSkillsChange={setSkills} />
+
+            {isOnboarding && skills.length === 0 ? (
+              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Add at least one skill to continue using SkillVibe.
+              </div>
+            ) : null}
           </div>
+        </MotionWrapper>
+
+        <MotionWrapper>
+          <form onSubmit={handlePasswordChange} className="surface-card p-8">
+            <h2 className="text-xl font-semibold text-neutral-900">Password</h2>
+            <p className="mt-1 text-sm text-neutral-600">
+              Change your account password.
+            </p>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+                className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 outline-none transition focus:border-indigo-300"
+                placeholder="Current password"
+                autoComplete="current-password"
+              />
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 outline-none transition focus:border-indigo-300"
+                placeholder="New password"
+                autoComplete="new-password"
+              />
+            </div>
+
+            {passwordError ? (
+              <p className="mt-4 text-sm text-red-600">{passwordError}</p>
+            ) : null}
+            {passwordMessage ? (
+              <p className="mt-4 text-sm text-green-700">{passwordMessage}</p>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={passwordLoading}
+              className="mt-5 rounded-2xl bg-neutral-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-black disabled:opacity-50"
+            >
+              {passwordLoading ? "Updating..." : "Change Password"}
+            </button>
+          </form>
         </MotionWrapper>
 
         <MotionWrapper>

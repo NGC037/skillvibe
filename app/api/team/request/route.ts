@@ -49,12 +49,37 @@ export async function POST(request: Request) {
       );
     }
 
+    const participation = await prisma.participation.findUnique({
+      where: {
+        userId_eventId: {
+          userId: session.user.id,
+          eventId: team.eventId,
+        },
+      },
+      select: { status: true },
+    });
+
+    if (participation?.status !== "CONFIRMED") {
+      return NextResponse.json(
+        { error: "Confirm participation before joining a team." },
+        { status: 403 },
+      );
+    }
+
     const membership = await prisma.teamMember.findFirst({
-      where: { userId: session.user.id },
+      where: {
+        userId: session.user.id,
+        team: {
+          eventId: team.eventId,
+        },
+      },
     });
 
     if (membership) {
-      return NextResponse.json({ error: "You are already part of a team." }, { status: 409 });
+      return NextResponse.json(
+        { error: "You are already part of a team for this event." },
+        { status: 409 },
+      );
     }
 
     const pendingRequest = await prisma.teamJoinRequest.findFirst({

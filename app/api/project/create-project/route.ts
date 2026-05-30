@@ -70,6 +70,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!team.isReady) {
+      return NextResponse.json(
+        { error: "Team must pass readiness checks before workspace creation" },
+        { status: 400 },
+      );
+    }
+
     // Check if project already exists
     const existingProject = await prisma.project.findUnique({
       where: { teamId },

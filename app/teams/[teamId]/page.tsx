@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import AppLayout from "@/components/layout/AppLayout";
 
 type TeamIntel = {
   matchScore: number;
@@ -175,6 +176,7 @@ export default function TeamPage({
 
   if (status === "loading") {
     return (
+      <AppLayout>
       <div className="mx-auto max-w-5xl space-y-8 px-6 py-10">
         <div className="surface-card-strong p-8">
           <div className="shimmer-skeleton h-8 w-48 rounded-full" />
@@ -185,19 +187,21 @@ export default function TeamPage({
           <div className="shimmer-skeleton h-3 w-full rounded-full" />
         </div>
       </div>
+      </AppLayout>
     );
   }
 
   if (!session) {
-    return <p className="p-6">Not logged in</p>;
+    return <AppLayout><p className="p-6">Not logged in</p></AppLayout>;
   }
 
   if (teamError) {
-    return <p className="p-6 text-red-600">{teamError}</p>;
+    return <AppLayout><p className="p-6 text-red-600">{teamError}</p></AppLayout>;
   }
 
   if (!team) {
     return (
+      <AppLayout>
       <div className="mx-auto max-w-5xl space-y-8 px-6 py-10">
         <div className="surface-card-strong p-8">
           <div className="shimmer-skeleton h-8 w-40 rounded-full" />
@@ -208,6 +212,7 @@ export default function TeamPage({
           <div className="shimmer-skeleton h-24 w-full rounded-2xl" />
         </div>
       </div>
+      </AppLayout>
     );
   }
 
@@ -281,7 +286,8 @@ export default function TeamPage({
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-10 px-6 py-10">
+    <AppLayout>
+    <div className="mx-auto max-w-5xl space-y-10">
       <div className="overflow-hidden rounded-[1.75rem] border border-white/20 bg-gradient-to-br from-purple-700 via-indigo-600 to-teal-500 p-8 text-white shadow-[0_24px_70px_-30px_rgba(79,70,229,0.55)]">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
@@ -617,5 +623,6 @@ export default function TeamPage({
         Back to Dashboard
       </Link>
     </div>
+    </AppLayout>
   );
 }

@@ -58,7 +58,7 @@ export default function TeamsWorkspaceGrid({
 
   if (teams.length === 0) {
     return (
-      <div className="bg-white border border-neutral-200 rounded-xl p-8">
+      <div className="surface-card p-8">
         <p className="text-neutral-600">You are not part of any team yet.</p>
       </div>
     );
@@ -73,7 +73,7 @@ export default function TeamsWorkspaceGrid({
           <div
             key={team.id}
             onClick={() => router.push(`/teams/${team.id}`)}
-            className="bg-white border border-neutral-200 rounded-xl p-6 hover:shadow-md hover:-translate-y-1 transition cursor-pointer"
+            className="surface-card interactive-card cursor-pointer p-6 transition"
             role="button"
             tabIndex={0}
             onKeyDown={(event) => {
@@ -114,7 +114,7 @@ export default function TeamsWorkspaceGrid({
                     onClick={() =>
                       router.push(`/dashboard/team/${team.id}/workspace`)
                     }
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition"
+                    className="rounded-xl bg-indigo-600 px-4 py-2 text-white font-medium transition hover:bg-indigo-700"
                   >
                     Open Workspace
                   </button>
@@ -123,7 +123,7 @@ export default function TeamsWorkspaceGrid({
                     onClick={() =>
                       router.push(`/dashboard/team/${team.id}/workspace`)
                     }
-                    className="px-4 py-2 bg-gradient-to-r from-purple-500 to-teal-400 text-white rounded-lg font-medium hover:shadow-md transition"
+                    className="rounded-xl bg-gradient-to-r from-purple-600 to-teal-500 px-4 py-2 text-white font-medium transition hover:shadow-md"
                   >
                     Start Workspace
                   </button>

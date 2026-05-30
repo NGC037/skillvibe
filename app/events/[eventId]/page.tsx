@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react/no-unescaped-entities */
+
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -23,6 +25,9 @@ interface EventData {
   minTeamSize: number;
   maxTeamSize: number;
   maxParticipants?: number;
+  posterUrl?: string | null;
+  registrationStartDate?: string | null;
+  registrationEndDate?: string | null;
 }
 
 interface UserTeam {
@@ -76,10 +81,10 @@ export default function EventDetailPage() {
           if (participationData.teamId) {
             setUserTeam({
               id: participationData.teamId,
-              code: "",
-              name: "",
-              leaderId: "",
-              isLocked: false,
+              code: participationData.teamCode || "",
+              name: participationData.teamName || "",
+              leaderId: participationData.teamLeaderId || "",
+              isLocked: Boolean(participationData.teamLocked),
             });
             setParticipationStep("in_team");
           } else if (status === "CONFIRMED") {
@@ -189,7 +194,7 @@ export default function EventDetailPage() {
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8">
+          <div className="min-h-screen py-8">
         <div className="max-w-4xl mx-auto px-6 space-y-8">
           <button
             onClick={() => router.back()}
@@ -205,7 +210,19 @@ export default function EventDetailPage() {
             className="space-y-6"
           >
             {/* Event Header */}
-            <div className="bg-white rounded-xl shadow-sm p-8 border border-slate-200">
+            <div className="surface-card overflow-hidden p-0">
+              {event.posterUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={event.posterUrl}
+                  alt={event.title}
+                  className="h-64 w-full object-cover"
+                />
+              ) : (
+                <div className="h-44 w-full bg-gradient-to-br from-purple-700 via-indigo-600 to-teal-500" />
+              )}
+
+              <div className="p-8">
               <h1 className="text-4xl font-bold text-slate-900">
                 {event.title}
               </h1>
@@ -225,11 +242,17 @@ export default function EventDetailPage() {
                     </span>
                   </div>
                 )}
+                <div className="bg-slate-100 rounded-lg px-3 py-2">
+                  <span className="text-slate-600 font-medium">
+                    Registration: {formatDateRange(event.registrationStartDate, event.registrationEndDate)}
+                  </span>
+                </div>
+              </div>
               </div>
             </div>
 
             {/* Participation Flow */}
-            <div className="bg-white rounded-xl shadow-sm p-8 border border-slate-200">
+            <div className="surface-card p-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-6">
                 Your Participation
               </h2>
@@ -374,7 +397,7 @@ export default function EventDetailPage() {
                   </div>
                   <button
                     onClick={() =>
-                      router.push(`/dashboard/team/${userTeam.id}`)
+                      router.push(`/dashboard/team/${userTeam.id}/workspace`)
                     }
                     className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 font-medium transition-colors"
                   >
@@ -409,7 +432,6 @@ export default function EventDetailPage() {
         {/* Join Team Modal */}
         {showJoinTeamModal && (
           <JoinTeamModal
-            eventId={eventId}
             onClose={() => {
               setShowJoinTeamModal(false);
               setJoinRequestCode(null);
@@ -424,6 +446,23 @@ export default function EventDetailPage() {
       </div>
     </AppLayout>
   );
+}
+
+function formatDateRange(start: string | null | undefined, end: string | null | undefined) {
+  if (!start && !end) {
+    return "Dates to be announced";
+  }
+
+  const formatDate = (value: string | null | undefined) =>
+    value
+      ? new Date(value).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : "TBD";
+
+  return `${formatDate(start)} - ${formatDate(end)}`;
 }
 
 interface CreateTeamModalProps {
@@ -815,12 +854,11 @@ function CreateTeamModal({
 }
 
 interface JoinTeamModalProps {
-  eventId: string;
   onClose: () => void;
   onSuccess: (code: string) => void;
 }
 
-function JoinTeamModal({ eventId, onClose, onSuccess }: JoinTeamModalProps) {
+function JoinTeamModal({ onClose, onSuccess }: JoinTeamModalProps) {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -3,7 +3,7 @@
 import AppLayout from "@/components/layout/AppLayout";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
 type DashboardSkill = {
@@ -41,6 +41,7 @@ const statCards = [
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
 
   if (session?.user?.role === "ADMIN") {
     redirect("/admin");
@@ -78,9 +79,13 @@ export default function DashboardPage() {
           );
 
           setSkills(formatted);
+
+          if (session?.user?.role === "STUDENT" && formatted.length === 0) {
+            router.replace("/profile?onboarding=1");
+          }
         }
       });
-  }, []);
+  }, [router, session?.user?.role]);
 
   useEffect(() => {
     fetch("/api/users/participations")

@@ -68,6 +68,7 @@ export default async function AdminPage() {
   }
 
   const totalEvents = await prisma.event.count();
+  const totalUsers = await prisma.user.count();
   const totalParticipations = await prisma.participation.count();
   const confirmedParticipations = await prisma.participation.count({
     where: { status: "CONFIRMED" },
@@ -234,7 +235,14 @@ export default async function AdminPage() {
           </div>
         </MotionWrapper>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-5">
+          <AnimatedCard>
+            <div className="surface-card interactive-card p-6">
+              <p className="text-sm text-neutral-500">Total Users</p>
+              <p className="mt-2 text-4xl font-bold">{totalUsers}</p>
+            </div>
+          </AnimatedCard>
+
           <AnimatedCard>
             <div className="surface-card interactive-card p-6">
               <p className="text-sm text-neutral-500">Total Events</p>
